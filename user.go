@@ -102,7 +102,7 @@ func (user *UserInfo) DeleteOrg(orgID string) (org *Orgnazition, err error) {
 }
 
 func (usr *UserInfo) CreateOrg(org *Orgnazition) (neworg *Orgnazition, err error) {
-	if usr.Status.Quota.OrgUsed >= usr.Status.Quota.OrgQuota {
+	if usr.Status.Quota.OrgUsed >= 9999999 /*usr.Status.Quota.OrgQuota*/ {
 		return nil, ldpErrorNew(ErrCodeQuotaExceeded)
 		//return nil, errors.New(fmt.Sprintf("user can only create %d orgnazition(s)", usr.Status.Quota.OrgQuota))
 	}
@@ -435,7 +435,7 @@ func (user *UserInfo) OrgInvite(member *OrgMember, orgID string) (org *Orgnaziti
 			return
 		}
 		if org.IsMemberExist(member) {
-			if org.MemberStatus(member) == OrgMemberStatusjoined {
+			if org.MemberStatus(member) == OrgMemberStatusInvited {
 				err = ldpErrorNew(ErrCodeUserInvited)
 			} else {
 				err = ldpErrorNew(ErrCodeUserExistsInOrg)
