@@ -5,7 +5,7 @@ import (
 	//"fmt"
 	//"errors"
 
-	//stat "github.com/asiainfoLDP/datahub_commons/statistics"
+	//stat "github.com/asiainfoLDP/datafoundry_proxy/statistics"
 	//"github.com/asiainfoLDP/datahub_commons/log"
 )
 

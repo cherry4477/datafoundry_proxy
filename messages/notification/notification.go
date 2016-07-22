@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"bytes"
 	
-	stat "github.com/asiainfoLDP/datahub_commons/statistics"
+	stat "github.com/asiainfoLDP/datafoundry_proxy/statistics"
 	"github.com/asiainfoLDP/datahub_commons/log"
 )
 
@@ -54,7 +54,7 @@ func TryToUpgradeDatabase(db *sql.DB, dbName string, reallyNeedUpgrade bool) err
 		// init version value stat as LatestDataVersion if it doesn't exist,
 		// which means tables are just created. In this case, no upgrations are needed.
 		
-		// INSERT INTO DH_ITEM_STAT (STAT_KEY, STAT_VALUE) 
+		// INSERT INTO DF_ITEM_STAT (STAT_KEY, STAT_VALUE) 
 		// VALUES(dbName#version, LatestDataVersion) 
 		// ON DUPLICATE KEY UPDATE STAT_VALUE=LatestDataVersion;
 		dbVersionKey := stat.GetVersionKey(dbName)

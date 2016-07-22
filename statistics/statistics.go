@@ -136,7 +136,7 @@ var ErrOldStatNotMatch = errors.New("old stat not match")
 // ifOldStat is only valid when it is >= 0s
 // if old stat doesn't match ifOldStat, the old stat and error will be returned
 func updateOrSetStat(db *sql.DB, key string, delta, ifOldStat int, isUpdate bool) (int, error) {
-	sqlget := `select STAT_VALUE from DH_ITEM_STAT where STAT_KEY=?`
+	sqlget := `select STAT_VALUE from DF_ITEM_STAT where STAT_KEY=?`
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -165,7 +165,7 @@ func updateOrSetStat(db *sql.DB, key string, delta, ifOldStat int, isUpdate bool
 			return 0, errors.New("stat delta can't be <= 0")
 		}
 
-		sqlinsert := `insert into DH_ITEM_STAT (STAT_KEY, STAT_VALUE) values (?, ?)`
+		sqlinsert := `insert into DF_ITEM_STAT (STAT_KEY, STAT_VALUE) values (?, ?)`
 		_, err := tx.Exec(sqlinsert, key, stat)
 		if err != nil {
 			tx.Rollback()
@@ -188,7 +188,7 @@ func updateOrSetStat(db *sql.DB, key string, delta, ifOldStat int, isUpdate bool
 		//	stat = 0
 		//}
 
-		sqlupdate := `update DH_ITEM_STAT set STAT_VALUE=? where STAT_KEY=?`
+		sqlupdate := `update DF_ITEM_STAT set STAT_VALUE=? where STAT_KEY=?`
 		_, err := tx.Exec(sqlupdate, stat, key)
 		if err != nil {
 			tx.Rollback()
@@ -203,7 +203,7 @@ func updateOrSetStat(db *sql.DB, key string, delta, ifOldStat int, isUpdate bool
 
 func RetrieveStat(db *sql.DB, key string) (int, error) {
 	stat := 0
-	sqlstr := `select STAT_VALUE from DH_ITEM_STAT where STAT_KEY=?`
+	sqlstr := `select STAT_VALUE from DF_ITEM_STAT where STAT_KEY=?`
 	err := db.QueryRow(sqlstr, key).Scan(&stat)
 	switch {
 	case err == sql.ErrNoRows:
@@ -225,7 +225,7 @@ func RemoveStat(db *sql.DB, key string) (int, error) {
 		return 0, nil
 	}
 	
-	sqlstr := `delete from DH_ITEM_STAT where STAT_KEY=?`
+	sqlstr := `delete from DF_ITEM_STAT where STAT_KEY=?`
 	_, err = db.Exec(sqlstr, key)
 	switch {
 	case err == sql.ErrNoRows:
@@ -246,7 +246,7 @@ type StatCursor struct {
 }
 
 func GetStatCursor(db *sql.DB) (*StatCursor, error) {
-	rows, err := db.Query(`select STAT_KEY, STAT_VALUE from DH_ITEM_STAT`)
+	rows, err := db.Query(`select STAT_KEY, STAT_VALUE from DF_ITEM_STAT`)
 	if err != nil {
 		return nil, err
 	}
