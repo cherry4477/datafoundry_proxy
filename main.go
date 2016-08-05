@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/asiainfoLDP/datafoundry_proxy/messages"
+	"github.com/asiainfoLDP/datafoundry_proxy/openshift"
 )
 
 type mux struct{}
@@ -61,6 +62,7 @@ func main() {
 	router.DELETE("/lapi/v1/namespaces/:namespace/volume/:name", DeleteVolume)
 
 	go messages.Init( /*router, */ MysqlEnv, nil /*KafkaEnv*/, EmailEnv)
+	go openshift.Init(DataFoundryEnv)
 
 	router.NotFound = &mux{}
 
