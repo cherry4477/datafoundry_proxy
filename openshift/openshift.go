@@ -36,9 +36,9 @@ import (
 // 
 //==============================================================
 
-var theOC *OpenshiftClient
+var theOC *OpenshiftClient // with admin token
 
-func Client() *OpenshiftClient {
+func adminClient() *OpenshiftClient {
 	return theOC
 }
 
@@ -54,6 +54,20 @@ func Init(ocEnv env.Env) {
 // 
 //==============================================================
 
+// for general user
+// the token must contains "Bearer "
+func NewOpenshiftClient(token string) *OpenshiftClient {
+	oc := &OpenshiftClient{
+		host:    theOC.host,
+		oapiUrl: theOC.oapiUrl,
+		kapiUrl: theOC.kapiUrl,
+		
+		bearerToken: token,
+	}
+	
+	return oc
+}
+
 type OpenshiftClient struct {
 	host    string
 	//authUrl string
@@ -66,6 +80,7 @@ type OpenshiftClient struct {
 	bearerToken string
 }
 
+// for admin
 func newOpenshiftClient(host, username, password string) *OpenshiftClient {
 	host = "https://" + host
 	oc := &OpenshiftClient{
@@ -74,8 +89,8 @@ func newOpenshiftClient(host, username, password string) *OpenshiftClient {
 		oapiUrl: host + "/oapi/v1",
 		kapiUrl: host + "/api/v1",
 		
-		username:  username,
-		password:  password,
+		username: username,
+		password: password,
 	}
 	
 	go oc.updateBearerToken()
@@ -97,7 +112,7 @@ func (oc *OpenshiftClient) updateBearerToken () {
 			time.Sleep(15 * time.Second)
 		} else {
 			//clientConfig.BearerToken = token
-			oc.bearerToken = token
+			oc.bearerToken = "Bearer " + token
 			
 			println("RequestToken token: ", token)
 			
@@ -128,7 +143,7 @@ func (oc *OpenshiftClient) request (method string, url string, body []byte, time
 	//	req.Header.Add(k, v)
 	//}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer " + token)
+	req.Header.Set("Authorization", token)
 	
 	transCfg := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -223,8 +238,11 @@ type OpenshiftREST struct {
 //	return &OpenshiftREST{oc: oc}
 //}
 
-func NewOpenshiftREST() *OpenshiftREST {
-	return &OpenshiftREST{oc: Client()}
+func NewOpenshiftREST(client *OpenshiftClient) *OpenshiftREST {
+	if client == nil {
+		return &OpenshiftREST{oc: adminClient()}
+	} 
+	return &OpenshiftREST{oc: client}
 }
 
 func (osr *OpenshiftREST) doRequest (method, url string, bodyParams interface{}, into interface{}) *OpenshiftREST {
@@ -382,7 +400,7 @@ func GetReplicationControllersByLabels(serviceBrokerNamespace string, labels map
 	
 	rcs := kapi.ReplicationControllerList{}
 	
-	osr := NewOpenshiftREST().KList(uri, labels, &rcs)
+	osr := NewOpenshiftREST(nil).KList(uri, labels, &rcs)
 	if osr.Err != nil {
 		return nil, osr.Err
 	}
