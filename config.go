@@ -20,6 +20,8 @@ const (
 	LDAP_BASE_DN        string = "LDAP_BASE_DN" //"cn=%s,ou=Users,dc=openstack,dc=org"
 
 	DATAFOUNDRY_HOST_ADDR string = "DATAFOUNDRY_HOST_ADDR"
+	DATAFOUNDRY_ADMIN_USER string = "DATAFOUNDRY_ADMIN_USER"
+	DATAFOUNDRY_ADMIN_PASS string = "DATAFOUNDRY_ADMIN_PASS"
 	DATAFOUNDRY_API_ADDR  string = "DATAFOUNDRY_API_ADDR"
 	
 	ENV_NAME_MYSQL_ADDR       string = "ENV_NAME_MYSQL_ADDR"
@@ -37,6 +39,13 @@ const (
 	ADMIN_EMAIL_PASSWORD string = "ADMIN_EMAIL_PASSWORD"
 	EMAIL_SERVER_HOST    string = "EMAIL_SERVER_HOST"
 	EMAIL_SERVER_PORT    string = "EMAIL_SERVER_PORT"
+	
+	HEKETI_HOST_ADDR string = "HEKETI_HOST_ADDR"
+	HEKETI_HOST_PORT string = "HEKETI_HOST_PORT"
+	HEKETI_USER      string = "HEKETI_USER"
+	HEKETI_KEY       string = "HEKETI_KEY"
+	
+	GLUSTER_ENDPOINTS_NAME string = "GLUSTER_ENDPOINTS_NAME"
 )
 const (
 	ETCDPrefix      string = "datafoundry.io/"
@@ -48,6 +57,19 @@ const (
 )
 
 var (
+	GlusterEnv = &EnvOnce{
+		envs: map[string]string{
+			GLUSTER_ENDPOINTS_NAME: "",
+		},
+	}
+	HeketiEnv = &EnvOnce{
+		envs: map[string]string{
+			HEKETI_HOST_ADDR: "",
+			HEKETI_HOST_PORT: "",
+			HEKETI_USER:      "",
+			HEKETI_KEY:       "",
+		},
+	}
 	MysqlEnv = &EnvOnce2{EnvOnce: EnvOnce{
 		envs: map[string]string{
 			ENV_NAME_MYSQL_ADDR:       "",
@@ -91,6 +113,8 @@ var (
 	DataFoundryEnv = &EnvOnce{
 		envs: map[string]string{
 			DATAFOUNDRY_HOST_ADDR: "dev.dataos.io:8443",
+			DATAFOUNDRY_ADMIN_USER: "",
+			DATAFOUNDRY_ADMIN_PASS: "",
 			DATAFOUNDRY_API_ADDR:  "",
 		},
 	}
@@ -175,7 +199,15 @@ func envNil(k string) {
 func init() {
 
 	flag.Parse()
-
+	
+	GlusterEnv.Init()
+	GlusterEnv.Print()
+	GlusterEnv.Validate(envNil)
+	
+	HeketiEnv.Init()
+	HeketiEnv.Print()
+	// HeketiEnv.Validate(envNil)
+	
 	MysqlEnv.Init()
 	MysqlEnv.Print()
 	MysqlEnv.Validate(envNil)

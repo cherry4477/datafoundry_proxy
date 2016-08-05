@@ -194,6 +194,20 @@ func RespOK(w http.ResponseWriter, data interface{}) {
 	}
 }
 
+func RespAccepted(w http.ResponseWriter, data interface{}) {
+	if data == nil {
+		data = genRespJson(http.StatusAccepted, nil)
+	}
+
+	if body, err := json.MarshalIndent(data, "", "  "); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		w.Write(body)
+	}
+}
+
 func genRespJson(httpCode int, err error) *APIResponse {
 	resp := new(APIResponse)
 	var msgCode int

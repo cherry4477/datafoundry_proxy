@@ -43,11 +43,7 @@ func main() {
 	router.PUT("/lapi/password_modify", PasswordModify) //account_identifier with token.
 	router.POST("/lapi/send_verify_email", SendVerifyMail)
 	router.GET("/verify_account/:token", VerifyAccount)
-
-	router.GET("/lapi/inbox", GetMessages)          //get msgs
-	router.GET("/lapi/inbox_stat", GetMessageStat)  //get msgs
-	router.PUT("/lapi/inbox/:id", ModifyMessage)    //mark msg as read.
-	router.DELETE("/lapi/inbox/:id", DeleteMessage) //mark msg as read.
+	
 	//organizations
 	router.GET("/lapi/orgs", ListOrganizations)
 	router.POST("/lapi/orgs", CreateOrganization)
@@ -60,6 +56,9 @@ func main() {
 	// router.PUT("/lapi/orgs/:org/remove", ManageOrganization)     //
 	// router.PUT("/lapi/orgs/:org/privileged", ManageOrganization) //
 	//action=privileged,remove,
+	
+	router.POST("/lapi/v1/namespaces/:namespace/volume", CreateVolume)     
+	router.DELETE("/lapi/v1/namespaces/:namespace/volume/:name", DeleteVolume)
 
 	go messages.Init( /*router, */ MysqlEnv, nil /*KafkaEnv*/, EmailEnv)
 
