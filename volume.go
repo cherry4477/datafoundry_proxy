@@ -139,17 +139,18 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	hkiClient := heketiClient()
 
-	clusterlist, err := hkiClient.ClusterList()
-	if err != nil {
-		glog.Error(err)
-		RespError(w, err, http.StatusBadRequest)
-		return
-	}
+	// clusterlist, err := hkiClient.ClusterList()
+	// if err != nil {
+	// 	glog.Error(err)
+	// 	RespError(w, err, http.StatusBadRequest)
+	// 	return
+	// }
 
 	req := &api.VolumeCreateRequest{}
 	req.Size = int(size)
 	//req.Name = pvcname // ! don't set name, otherwise, can't get volume id from pv
-	req.Clusters = clusterlist.Clusters
+
+	req.Clusters = []string{"68aa170df797272ac2ac90fac1f7460b"} //hacked by san
 	req.Durability.Type = api.DurabilityReplicate
 	req.Durability.Replicate.Replica = 3
 	req.Durability.Disperse.Data = 4
@@ -182,7 +183,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	// create pv
 
-	openshiftUrlPrefix := "/namespaces/" + namespace
+	openshiftUrlPrefix := "" //pv is a cluster scoped resouece. "/namespaces/" + namespace
 
 	resourceList := make(kapi.ResourceList)
 	resourceList[kapi.ResourceStorage] = *kapiresource.NewQuantity(int64(size*Gi), kapiresource.BinarySI)
@@ -218,7 +219,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		if succeeded {
 			return
 		}
-		
+
 		osrPV := openshift.NewOpenshiftREST(nil)
 		osrPV.KDelete(openshiftUrlPrefix+"/persistentvolumes", inputPV)
 		if osrPV.Err != nil {
@@ -254,7 +255,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		if succeeded {
 			return
 		}
-		
+
 		osrPVC := openshift.NewOpenshiftREST(openshift.NewOpenshiftClient(retrieveToken(r)))
 		osrPVC.KDelete(openshiftUrlPrefix+"/persistentvolumeclaims", inputPVC)
 		if osrPVC.Err != nil {
