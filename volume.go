@@ -32,6 +32,12 @@ var invalidVolumnSize = fmt.Errorf(
 	MinVolumnSize, MaxVolumnSize)
 
 func heketiClient() *heketi.Client {
+
+	glog.Warningf(fmt.Sprintf("==================== http://%s:%s",
+		HeketiEnv.Get(HEKETI_HOST_ADDR),
+		HeketiEnv.Get(HEKETI_HOST_PORT),
+	))
+
 	return heketi.NewClient(
 		fmt.Sprintf("http://%s:%s",
 			HeketiEnv.Get(HEKETI_HOST_ADDR),
@@ -140,6 +146,8 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	hkiClient := heketiClient()
 
+	glog.Warningf("1111")
+	_, _ = hkiClient.ClusterList() // test
 	// clusterlist, err := hkiClient.ClusterList()
 	// if err != nil {
 	// 	glog.Error(err)
@@ -164,12 +172,14 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	var succeeded = false
 
+	glog.Warningf("222")
 	volume, err := hkiClient.VolumeCreate(req)
 	if err != nil {
 		glog.Error(err)
 		RespError(w, err, http.StatusBadRequest)
 		return
 	}
+	glog.Warningf("3333")
 
 	defer func() {
 		if succeeded {
