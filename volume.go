@@ -32,6 +32,12 @@ var invalidVolumnSize = fmt.Errorf(
 	MinVolumnSize, MaxVolumnSize)
 
 func heketiClient() *heketi.Client {
+
+	println(fmt.Sprintf("==================== http://%s:%s",
+		HeketiEnv.Get(HEKETI_HOST_ADDR),
+		HeketiEnv.Get(HEKETI_HOST_PORT),
+	))
+
 	return heketi.NewClient(
 		fmt.Sprintf("http://%s:%s",
 			HeketiEnv.Get(HEKETI_HOST_ADDR),
@@ -140,6 +146,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	hkiClient := heketiClient()
 
+	_, _ = hkiClient.ClusterList() // test
 	// clusterlist, err := hkiClient.ClusterList()
 	// if err != nil {
 	// 	glog.Error(err)
