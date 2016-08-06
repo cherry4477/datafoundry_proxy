@@ -308,7 +308,7 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	// get pv (will delete it at the end, for it stores the volumn id info)
 
-	openshiftUrlPrefix := "/namespaces/" + namespace
+	openshiftUrlPrefix := "" //pv is a cluster scoped resource."/namespaces/" + namespace
 
 	pvName := PvcName2PvName(namespace, pvcname)
 	pv := &kapi.PersistentVolume{}
