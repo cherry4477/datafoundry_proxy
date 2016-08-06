@@ -24,7 +24,7 @@ const (
 	MinVolumnSize = 10
 	MaxVolumnSize = 200
 
-	Gi = int64(2) << 30
+	Gi = int64(1) << 30
 )
 
 var invalidVolumnSize = fmt.Errorf(
