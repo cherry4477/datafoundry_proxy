@@ -4,10 +4,11 @@ import (
 	//"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"strings"
+
+	"github.com/golang/glog"
+	"github.com/julienschmidt/httprouter"
 
 	"github.com/asiainfoLDP/datafoundry_proxy/messages"
 	"github.com/asiainfoLDP/datafoundry_proxy/openshift"
@@ -23,7 +24,7 @@ const (
 	MinVolumnSize = 10
 	MaxVolumnSize = 200
 
-	Gi = 2 << 30
+	Gi = int64(2) << 30
 )
 
 var invalidVolumnSize = fmt.Errorf(

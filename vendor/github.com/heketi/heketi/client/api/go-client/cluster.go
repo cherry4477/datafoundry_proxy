@@ -18,9 +18,10 @@ package client
 
 import (
 	"bytes"
+	"net/http"
+
 	"github.com/heketi/heketi/pkg/glusterfs/api"
 	"github.com/heketi/heketi/pkg/utils"
-	"net/http"
 )
 
 func (c *Client) ClusterCreate() (*api.ClusterInfoResponse, error) {
@@ -108,6 +109,10 @@ func (c *Client) ClusterList() (*api.ClusterListResponse, error) {
 
 	// Get info
 	r, err := c.do(req)
+
+	println(">>> " + (c.host + "/clusters"))
+	println("error: ", err)
+
 	if err != nil {
 		return nil, err
 	}
