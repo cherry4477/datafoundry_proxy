@@ -1,39 +1,39 @@
 package openshift
 
 import (
-	//"fmt"
 	"errors"
+	"fmt"
 	//marathon "github.com/gambol99/go-marathon"
 	//"github.com/pivotal-cf/brokerapi"
-	"time"
-	"strings"
-	"bytes"
 	"bufio"
+	"bytes"
+	"strings"
+	"time"
 	//"io"
 	//"os"
-	"io/ioutil"
 	"crypto/tls"
+	"encoding/base32"
+	"encoding/base64"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	neturl "net/url"
-	"encoding/base64"
-	"encoding/base32"
-	"encoding/json"
 	//"golang.org/x/build/kubernetes"
 	//"golang.org/x/oauth2"
-	
+
 	kclient "k8s.io/kubernetes/pkg/client/unversioned"
-	
+
 	"github.com/openshift/origin/pkg/cmd/util/tokencmd"
-	
+
 	kapi "k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/util/yaml"
 	//"github.com/ghodss/yaml"
-	
+
 	"github.com/asiainfoLDP/datafoundry_proxy/env"
 )
 
 //==============================================================
-// 
+//
 //==============================================================
 
 var theOC *OpenshiftClient // with admin token
@@ -43,15 +43,15 @@ func adminClient() *OpenshiftClient {
 }
 
 func Init(ocEnv env.Env) {
-	theOC = newOpenshiftClient (
-		ocEnv.Get("DATAFOUNDRY_HOST_ADDR"), 
-		ocEnv.Get("DATAFOUNDRY_ADMIN_USER"), 
+	theOC = newOpenshiftClient(
+		ocEnv.Get("DATAFOUNDRY_HOST_ADDR"),
+		ocEnv.Get("DATAFOUNDRY_ADMIN_USER"),
 		ocEnv.Get("DATAFOUNDRY_ADMIN_PASS"),
 	)
 }
 
 //==============================================================
-// 
+//
 //==============================================================
 
 // for general user
@@ -61,72 +61,86 @@ func NewOpenshiftClient(token string) *OpenshiftClient {
 		host:    theOC.host,
 		oapiUrl: theOC.oapiUrl,
 		kapiUrl: theOC.kapiUrl,
-		
+
 		bearerToken: token,
 	}
-	
+
 	return oc
 }
 
 type OpenshiftClient struct {
-	host    string
+	host string
 	//authUrl string
 	oapiUrl string
 	kapiUrl string
-	
+
 	namespace   string
 	username    string
 	password    string
 	bearerToken string
 }
 
+func httpsAddrMaker(addr string) string {
+	if strings.HasSuffix(addr, "/") {
+		addr = strings.TrimRight(addr, "/")
+	}
+
+	if !strings.HasPrefix(addr, "https://") {
+		return fmt.Sprintf("https://%s", addr)
+	}
+
+	return addr
+}
+
 // for admin
 func newOpenshiftClient(host, username, password string) *OpenshiftClient {
-	host = "https://" + host
+	host = httpsAddrMaker(host)
 	oc := &OpenshiftClient{
-		host:    host,
+		host: host,
 		//authUrl: host + "/oauth/authorize?response_type=token&client_id=openshift-challenging-client",
 		oapiUrl: host + "/oapi/v1",
 		kapiUrl: host + "/api/v1",
-		
+
 		username: username,
 		password: password,
 	}
-	
+
 	go oc.updateBearerToken()
-	
+
 	return oc
 }
 
-func (oc *OpenshiftClient) updateBearerToken () {
+func (oc *OpenshiftClient) updateBearerToken() {
 	for {
 		clientConfig := &kclient.Config{}
 		clientConfig.Host = oc.host
 		clientConfig.Insecure = true
 		//clientConfig.Version =
-		
+
+		println("Request Token from: ", clientConfig.Host)
+
 		token, err := tokencmd.RequestToken(clientConfig, nil, oc.username, oc.password)
 		if err != nil {
 			println("RequestToken error: ", err.Error())
-			
+
 			time.Sleep(15 * time.Second)
 		} else {
 			//clientConfig.BearerToken = token
 			oc.bearerToken = "Bearer " + token
-			
+
 			println("RequestToken token: ", token)
-			
+
 			time.Sleep(3 * time.Hour)
 		}
 	}
 }
 
-func (oc *OpenshiftClient) request (method string, url string, body []byte, timeout time.Duration) (*http.Response, error) {
+func (oc *OpenshiftClient) request(method string, url string, body []byte, timeout time.Duration) (*http.Response, error) {
 	token := oc.bearerToken
 	if token == "" {
 		return nil, errors.New("token is blank")
 	}
-	
+
 	var req *http.Request
 	var err error
 	if len(body) == 0 {
@@ -134,23 +148,23 @@ func (oc *OpenshiftClient) request (method string, url string, body []byte, time
 	} else {
 		req, err = http.NewRequest(method, url, bytes.NewReader(body))
 	}
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	//for k, v := range headers {
 	//	req.Header.Add(k, v)
 	//}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", token)
-	
+
 	transCfg := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{
 		Transport: transCfg,
-		Timeout: timeout,
+		Timeout:   timeout,
 	}
 	return client.Do(req)
 }
@@ -160,7 +174,7 @@ type WatchStatus struct {
 	Err  error
 }
 
-func (oc *OpenshiftClient) doWatch (url string) (<-chan WatchStatus, chan<- struct{}, error) {
+func (oc *OpenshiftClient) doWatch(url string) (<-chan WatchStatus, chan<- struct{}, error) {
 	res, err := oc.request("GET", url, nil, 0)
 	if err != nil {
 		return nil, nil, err
@@ -168,42 +182,42 @@ func (oc *OpenshiftClient) doWatch (url string) (<-chan WatchStatus, chan<- stru
 	//if res.Body == nil {
 	//	return nil, nil, errors.New("response.body is nil")
 	//}
-	
+
 	statuses := make(chan WatchStatus, 5)
 	canceled := make(chan struct{}, 1)
-	
+
 	go func() {
-		defer func () {
+		defer func() {
 			close(statuses)
 			res.Body.Close()
 		}()
-		
+
 		reader := bufio.NewReader(res.Body)
 		for {
 			select {
-			case <- canceled:
+			case <-canceled:
 				return
 			default:
 			}
-			
+
 			line, err := reader.ReadBytes('\n')
 			if err != nil {
 				statuses <- WatchStatus{nil, err}
 				return
 			}
-			
+
 			statuses <- WatchStatus{line, nil}
 		}
 	}()
-	
+
 	return statuses, canceled, nil
 }
 
-func (oc *OpenshiftClient) OWatch (uri string) (<-chan WatchStatus, chan<- struct{}, error) {
+func (oc *OpenshiftClient) OWatch(uri string) (<-chan WatchStatus, chan<- struct{}, error) {
 	return oc.doWatch(oc.oapiUrl + "/watch" + uri)
 }
 
-func (oc *OpenshiftClient) KWatch (uri string) (<-chan WatchStatus, chan<- struct{}, error) {
+func (oc *OpenshiftClient) KWatch(uri string) (<-chan WatchStatus, chan<- struct{}, error) {
 	return oc.doWatch(oc.kapiUrl + "/watch" + uri)
 }
 
@@ -216,7 +230,7 @@ func (oc *OpenshiftClient) doRequest (method, url string, body []byte) ([]byte, 
 		return nil, err
 	}
 	defer res.Body.Close()
-	
+
 	return ioutil.ReadAll(res.Body)
 }
 
@@ -241,15 +255,15 @@ type OpenshiftREST struct {
 func NewOpenshiftREST(client *OpenshiftClient) *OpenshiftREST {
 	if client == nil {
 		return &OpenshiftREST{oc: adminClient()}
-	} 
+	}
 	return &OpenshiftREST{oc: client}
 }
 
-func (osr *OpenshiftREST) doRequest (method, url string, bodyParams interface{}, into interface{}) *OpenshiftREST {
+func (osr *OpenshiftREST) doRequest(method, url string, bodyParams interface{}, into interface{}) *OpenshiftREST {
 	if osr.Err != nil {
 		return osr
 	}
-	
+
 	var body []byte
 	if bodyParams != nil {
 		body, osr.Err = json.Marshal(bodyParams)
@@ -257,7 +271,7 @@ func (osr *OpenshiftREST) doRequest (method, url string, bodyParams interface{},
 			return osr
 		}
 	}
-	
+
 	//res, osr.Err := oc.request(method, url, body, GeneralRequestTimeout) // non-name error
 	res, err := osr.oc.request(method, url, body, GeneralRequestTimeout)
 	osr.Err = err
@@ -265,25 +279,25 @@ func (osr *OpenshiftREST) doRequest (method, url string, bodyParams interface{},
 		return osr
 	}
 	defer res.Body.Close()
-	
+
 	var data []byte
 	data, osr.Err = ioutil.ReadAll(res.Body)
 	if osr.Err != nil {
 		return osr
 	}
-	
+
 	//println("22222 len(data) = ", len(data), " , res.StatusCode = ", res.StatusCode)
-	
+
 	if res.StatusCode < 200 || res.StatusCode >= 400 {
 		osr.Err = errors.New(string(data))
 	} else {
 		if into != nil {
 			//println("into data = ", string(data), "\n")
-		
+
 			osr.Err = json.Unmarshal(data, into)
 		}
 	}
-	
+
 	return osr
 }
 
@@ -297,70 +311,70 @@ func buildUriWithSelector(uri string, selector map[string]string) string {
 		buf.WriteByte('=')
 		buf.WriteString(v)
 	}
-	
+
 	if buf.Len() == 0 {
 		return uri
 	}
-	
+
 	values := neturl.Values{}
 	values.Set("labelSelector", buf.String())
-	
+
 	if strings.IndexByte(uri, '?') < 0 {
 		uri = uri + "?"
 	}
-	
-	println("\n uri=", uri + values.Encode(), "\n")
-	
+
+	println("\n uri=", uri+values.Encode(), "\n")
+
 	return uri + values.Encode()
 }
 
-// o 
+// o
 
-func (osr *OpenshiftREST) OList (uri string, selector map[string]string, into interface{}) *OpenshiftREST {
-	
-	return osr.doRequest("GET", osr.oc.oapiUrl + buildUriWithSelector(uri, selector), nil, into)
+func (osr *OpenshiftREST) OList(uri string, selector map[string]string, into interface{}) *OpenshiftREST {
+
+	return osr.doRequest("GET", osr.oc.oapiUrl+buildUriWithSelector(uri, selector), nil, into)
 }
 
-func (osr *OpenshiftREST) OGet (uri string, into interface{}) *OpenshiftREST {
-	return osr.doRequest("GET", osr.oc.oapiUrl + uri, nil, into)
+func (osr *OpenshiftREST) OGet(uri string, into interface{}) *OpenshiftREST {
+	return osr.doRequest("GET", osr.oc.oapiUrl+uri, nil, into)
 }
 
-func (osr *OpenshiftREST) ODelete (uri string, into interface{}) *OpenshiftREST {
-	return osr.doRequest("DELETE", osr.oc.oapiUrl + uri, &kapi.DeleteOptions{}, into)
+func (osr *OpenshiftREST) ODelete(uri string, into interface{}) *OpenshiftREST {
+	return osr.doRequest("DELETE", osr.oc.oapiUrl+uri, &kapi.DeleteOptions{}, into)
 }
 
-func (osr *OpenshiftREST) OPost (uri string, body interface{}, into interface{}) *OpenshiftREST {
-	return osr.doRequest("POST", osr.oc.oapiUrl + uri, body, into)
+func (osr *OpenshiftREST) OPost(uri string, body interface{}, into interface{}) *OpenshiftREST {
+	return osr.doRequest("POST", osr.oc.oapiUrl+uri, body, into)
 }
 
-func (osr *OpenshiftREST) OPut (uri string, body interface{}, into interface{}) *OpenshiftREST {
-	return osr.doRequest("PUT", osr.oc.oapiUrl + uri, body, into)
+func (osr *OpenshiftREST) OPut(uri string, body interface{}, into interface{}) *OpenshiftREST {
+	return osr.doRequest("PUT", osr.oc.oapiUrl+uri, body, into)
 }
 
-// k 
+// k
 
-func (osr *OpenshiftREST) KList (uri string, selector map[string]string, into interface{}) *OpenshiftREST {
-	return osr.doRequest("GET", osr.oc.kapiUrl + buildUriWithSelector(uri, selector), nil, into)
+func (osr *OpenshiftREST) KList(uri string, selector map[string]string, into interface{}) *OpenshiftREST {
+	return osr.doRequest("GET", osr.oc.kapiUrl+buildUriWithSelector(uri, selector), nil, into)
 }
 
-func (osr *OpenshiftREST) KGet (uri string, into interface{}) *OpenshiftREST {
-	return osr.doRequest("GET", osr.oc.kapiUrl + uri, nil, into)
+func (osr *OpenshiftREST) KGet(uri string, into interface{}) *OpenshiftREST {
+	return osr.doRequest("GET", osr.oc.kapiUrl+uri, nil, into)
 }
 
-func (osr *OpenshiftREST) KDelete (uri string, into interface{}) *OpenshiftREST {
-	return osr.doRequest("DELETE", osr.oc.kapiUrl + uri, &kapi.DeleteOptions{}, into)
+func (osr *OpenshiftREST) KDelete(uri string, into interface{}) *OpenshiftREST {
+	return osr.doRequest("DELETE", osr.oc.kapiUrl+uri, &kapi.DeleteOptions{}, into)
 }
 
-func (osr *OpenshiftREST) KPost (uri string, body interface{}, into interface{}) *OpenshiftREST {
-	return osr.doRequest("POST", osr.oc.kapiUrl + uri, body, into)
+func (osr *OpenshiftREST) KPost(uri string, body interface{}, into interface{}) *OpenshiftREST {
+	return osr.doRequest("POST", osr.oc.kapiUrl+uri, body, into)
 }
 
-func (osr *OpenshiftREST) KPut (uri string, body interface{}, into interface{}) *OpenshiftREST {
-	return osr.doRequest("PUT", osr.oc.kapiUrl + uri, body, into)
+func (osr *OpenshiftREST) KPut(uri string, body interface{}, into interface{}) *OpenshiftREST {
+	return osr.doRequest("PUT", osr.oc.kapiUrl+uri, body, into)
 }
 
 //===============================================================
-// 
+//
 //===============================================================
 
 func GetServicePortByName(service *kapi.Service, name string) *kapi.ServicePort {
@@ -372,7 +386,7 @@ func GetServicePortByName(service *kapi.Service, name string) *kapi.ServicePort 
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -388,45 +402,45 @@ func GetPodPortByName(pod *kapi.Pod, name string) *kapi.ContainerPort {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 func GetReplicationControllersByLabels(serviceBrokerNamespace string, labels map[string]string) ([]kapi.ReplicationController, error) {
-	
+
 	println("to list pods in", serviceBrokerNamespace)
-	
+
 	uri := "/namespaces/" + serviceBrokerNamespace + "/pods"
-	
+
 	rcs := kapi.ReplicationControllerList{}
-	
+
 	osr := NewOpenshiftREST(nil).KList(uri, labels, &rcs)
 	if osr.Err != nil {
 		return nil, osr.Err
 	}
-	
+
 	return rcs.Items, osr.Err
 }
 
 //===============================================================
-// 
+//
 //===============================================================
 
 // maybe the replace order is important, so using slice other than map would be better
 /*
 func Yaml2Json(yamlTemplates []byte, replaces map[string]string) ([][]byte, error) {
 	var err error
-	
+
 	for old, rep := range replaces {
 		etcdTemplateData = bytes.Replace(etcdTemplateData, []byte(old), []byte(rep), -1)
 	}
-	
+
 	templates := bytes.Split(etcdTemplateData, []byte("---"))
 	for i := range templates {
 		templates[i] = bytes.TrimSpace(templates[i])
 		println("\ntemplates[", i, "] = ", string(templates[i]))
 	}
-	
+
 	return templates, err
 }
 */
@@ -436,14 +450,14 @@ func Yaml2Json(yamlTemplates []byte, replaces map[string]string) ([][]byte, erro
 	var err error
 	decoder := yaml.NewYAMLToJSONDecoder(bytes.NewBuffer(yamlData))
 	_ = decoder
-	
-	
+
+
 	for {
 		var t interface{}
 		err = decoder.Decode(&t)
 		m, ok := v.(map[string]interface{})
 		if ok {
-			
+
 		}
 	}
 }
@@ -454,27 +468,25 @@ func Yaml2Json(yamlTemplates []byte, replaces map[string]string) ([][]byte, erro
 	for old, rep := range replaces {
 		yamlTemplates = bytes.Replace(yamlTemplates, []byte(old), []byte(rep), -1)
 	}
-	
+
 	jsons := [][]byte{}
 	templates := bytes.Split(yamlTemplates, []byte("---"))
 	for i := range templates {
 		//templates[i] = bytes.TrimSpace(templates[i])
 		println("\ntemplates[", i, "] = ", string(templates[i]))
-		
+
 		json, err := yaml.YAMLToJSON(templates[i])
 		if err != nil {
 			return jsons, err
 		}
-		
+
 		jsons = append(jsons, json)
 		println("\njson[", i, "] = ", string(jsons[i]))
 	}
-	
+
 	return jsons, nil
 }
 */
-
-
 
 type YamlDecoder struct {
 	decoder *yaml.YAMLToJSONDecoder
@@ -483,38 +495,37 @@ type YamlDecoder struct {
 
 func NewYamlDecoder(yamlData []byte) *YamlDecoder {
 	return &YamlDecoder{
-			decoder: yaml.NewYAMLToJSONDecoder(bytes.NewBuffer(yamlData)),
-		}
+		decoder: yaml.NewYAMLToJSONDecoder(bytes.NewBuffer(yamlData)),
+	}
 }
 
 func (d *YamlDecoder) Decode(into interface{}) *YamlDecoder {
 	if d.Err == nil {
 		d.Err = d.decoder.Decode(into)
 	}
-	
+
 	return d
 }
 
 func NewElevenLengthID() string {
 	t := time.Now().UnixNano()
 	bs := make([]byte, 8)
-	for i := uint(0); i < 8; i ++ {
+	for i := uint(0); i < 8; i++ {
 		bs[i] = byte((t >> i) & 0xff)
 	}
 	return string(base64.RawURLEncoding.EncodeToString(bs))
 }
 
 var base32Encoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
+
 func NewThirteenLengthID() string {
 	t := time.Now().UnixNano()
 	bs := make([]byte, 8)
-	for i := uint(0); i < 8; i ++ {
+	for i := uint(0); i < 8; i++ {
 		bs[i] = byte((t >> i) & 0xff)
 	}
-	
+
 	dest := make([]byte, 16)
 	base32Encoding.Encode(dest, bs)
 	return string(dest[:13])
 }
-
-
