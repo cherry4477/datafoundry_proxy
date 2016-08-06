@@ -45,6 +45,11 @@ func main() {
 	router.POST("/lapi/send_verify_email", SendVerifyMail)
 	router.GET("/verify_account/:token", VerifyAccount)
 
+	router.GET("/lapi/inbox", GetMessages)          //get msgs
+	router.GET("/lapi/inbox_stat", GetMessageStat)  //get msgs
+	router.PUT("/lapi/inbox/:id", ModifyMessage)    //mark msg as read.
+	router.DELETE("/lapi/inbox/:id", DeleteMessage) //mark msg as read.
+
 	//organizations
 	router.GET("/lapi/orgs", ListOrganizations)
 	router.POST("/lapi/orgs", CreateOrganization)
