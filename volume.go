@@ -147,7 +147,6 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		hkiClient := heketiClient()
 
-		glog.Warningf("1111")
 		_, _ = hkiClient.ClusterList() // test
 		// clusterlist, err := hkiClient.ClusterList()
 		// if err != nil {
@@ -180,7 +179,6 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 			RespError(w, err, http.StatusBadRequest)
 			return
 		}
-		glog.Warningf("3333")
 
 		defer func() {
 			if succeeded {
