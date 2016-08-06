@@ -182,6 +182,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		defer func() {
 			if succeeded {
+				glog.Infoln("success")
 				return
 			}
 
@@ -224,11 +225,12 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		}
 		defer func() {
 			if succeeded {
+				glog.Infoln("success")
 				return
 			}
 
 			osrPV := openshift.NewOpenshiftREST(nil)
-			osrPV.KDelete(openshiftUrlPrefix+"/persistentvolumes", inputPV)
+			osrPV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+inputPV.Name, nil)
 			if osrPV.Err != nil {
 				glog.Warningf("delete pv error on failed to CreateVolume: pvname=%s, error: %s", inputPV.Name, osrPV.Err)
 			}
@@ -278,7 +280,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	// ...
 
-	RespOK(w, nil)
+	RespOK(w, outputPVC)
 }
 
 func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -339,6 +341,7 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		if osrDeletePVC.Err != nil {
 			glog.Warningf("delete pvc error: pvcname=%s, error: %s", pvcname, osrDeletePVC.Err)
 			RespError(w, osrDeletePVC.Err, http.StatusBadRequest)
+			return
 		}
 	}()
 
@@ -369,7 +372,7 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 			glog.Warningf("delete pvc error: pvcname=%s, error: %s", pvName, osrGetPV.Err)
 
-			RespError(w, osrDeletePV.Err, http.StatusBadRequest)
+			//RespError(w, osrDeletePV.Err, http.StatusBadRequest)
 			return
 		}
 	}()
