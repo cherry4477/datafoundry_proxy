@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	etcd "github.com/coreos/etcd/client"
 	"github.com/go-ldap/ldap"
 	"github.com/golang/glog"
-	"io/ioutil"
-	"net/http"
 )
 
 func httpPost(url string, body []byte, credential ...string) ([]byte, error) {
@@ -234,7 +235,7 @@ func genRespJson(httpCode int, err error) *APIResponse {
 			message = e.Message
 		} else {
 			msgCode = ErrCodeUnknownError
-			message = e.Error()
+			message = err.Error()
 		}
 	}
 
