@@ -213,6 +213,10 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		return
 	}
 	defer func() {
+		if succeeded {
+			return
+		}
+		
 		osrPV := openshift.NewOpenshiftREST(nil)
 		osrPV.KDelete(openshiftUrlPrefix + "/persistentvolumes", inputPV)
 		if osrPV.Err != nil {
@@ -245,6 +249,10 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		return
 	}
 	defer func() {
+		if succeeded {
+			return
+		}
+		
 		osrPVC := openshift.NewOpenshiftREST(openshift.NewOpenshiftClient(retrieveToken(r)))
 		osrPVC.KDelete(openshiftUrlPrefix + "/persistentvolumeclaims", inputPVC)
 		if osrPVC.Err != nil {
