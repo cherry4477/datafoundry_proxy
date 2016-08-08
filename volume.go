@@ -321,14 +321,6 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	// get pv (will delete it at the end, for it stores the volumn id info)
 
 	pvName := PvcName2PvName(namespace, pvcname)
-	pv := &kapi.PersistentVolume{}
-	// osrGetPV := openshift.NewOpenshiftREST(nil)
-	// osrGetPV.KGet(openshiftUrlPrefix+"/persistentvolumes/"+pvName, pv)
-	// if osrGetPV.Err != nil {
-	// 	RespError(w, osrGetPV.Err, http.StatusBadRequest)
-	// 	return
-	// }
-	//we don;t need to check if this pv exist, just delete it and ignore error.
 
 	// delete pvc
 
@@ -347,16 +339,22 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	// delete volume
 
 	go func() {
-
+		pv := &kapi.PersistentVolume{}
+		osrGetPV := openshift.NewOpenshiftREST(nil)
+		osrGetPV.KGet(openshiftUrlPrefix+"/persistentvolumes/"+pvName, pv)
+		if osrGetPV.Err != nil {
+			RespError(w, osrGetPV.Err, http.StatusBadRequest)
+			return
+		}
 		// delete pv
 		openshiftUrlPrefix := "" // "/namespaces/" + namespace
 
 		osrDeletePV := openshift.NewOpenshiftREST(nil)
-		osrDeletePV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+pvName, nil)
+		osrDeletePV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+pv.Name, nil)
 		if osrDeletePV.Err != nil {
 			// todo: retry once?
 
-			glog.Warningf("delete pvc error: pvcname=%s, error: %s", pvName, osrDeletePV.Err)
+			glog.Warningf("delete pv error: pvname=%s, error: %s", pv.Name, osrDeletePV.Err)
 
 			//RespError(w, osrDeletePV.Err, http.StatusBadRequest)
 			return
@@ -372,6 +370,8 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 				glog.Infof("delete volume error: pvcname=%s, volid=%s, error: %s", pvcname, volId, err)
 
 				// todo: log it
+			} else {
+				glog.Info("delete volume success, volumeid=%s", volId)
 			}
 		} else {
 			glog.Infof("pv.Spec.PersistentVolumeSource.Glusterfs == nil. pvcname=%s", pvcname)
