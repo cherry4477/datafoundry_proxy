@@ -148,18 +148,18 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		hkiClient := heketiClient()
 
 		_, _ = hkiClient.ClusterList() // test
-		// clusterlist, err := hkiClient.ClusterList()
-		// if err != nil {
-		// 	glog.Error(err)
-		// 	RespError(w, err, http.StatusBadRequest)
-		// 	return
-		// }
+		clusterlist, err := hkiClient.ClusterList()
+		if err != nil {
+			glog.Error(err)
+			RespError(w, err, http.StatusBadRequest)
+			return
+		}
 
 		req := &api.VolumeCreateRequest{}
 		req.Size = int(size)
 		//req.Name = pvcname // ! don't set name, otherwise, can't get volume id from pv
 
-		req.Clusters = []string{"68aa170df797272ac2ac90fac1f7460b"} //hacked by san
+		req.Clusters = clusterlist.Clusters //[]string{"68aa170df797272ac2ac90fac1f7460b"} //hacked by san
 		req.Durability.Type = api.DurabilityReplicate
 		req.Durability.Replicate.Replica = 3
 		req.Durability.Disperse.Data = 4
