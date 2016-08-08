@@ -157,7 +157,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		req := &api.VolumeCreateRequest{}
 		req.Size = int(size)
-		req.Name = pvcname + "-" + namespace + "-" + username + "-jd" // ! don't set name, otherwise, can't get volume id from pv
+		//req.Name = pvcname + "-" + namespace + "-" + username + "-jd" // ! don't set name, otherwise, can't get volume id from pv
 
 		req.Clusters = clusterlist.Clusters //[]string{"68aa170df797272ac2ac90fac1f7460b"} //hacked by san
 		req.Durability.Type = api.DurabilityReplicate
@@ -172,7 +172,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		var succeeded = false
 
-		glog.Warningf("222")
+		glog.Warningf("creating volume by %s@%s", username, namespace)
 		volume, err := hkiClient.VolumeCreate(req)
 		if err != nil {
 			glog.Error("create volume by heketi error:", err)
@@ -182,7 +182,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		defer func() {
 			if succeeded {
-				glog.Infoln("success")
+				//glog.Infoln("success")
 				return
 			}
 
@@ -228,7 +228,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		}
 		defer func() {
 			if succeeded {
-				glog.Infoln("success")
+				//glog.Infoln("success")
 				return
 			}
 
@@ -240,6 +240,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		}()
 
 		succeeded = true
+		glog.Warningf("create volume(%s) by %s@%s successfuly.", volume.Id, username, namespace)
 	}()
 
 	// create pvc
@@ -342,16 +343,17 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	// delete volume
 
 	go func() {
+		//get pv
+		openshiftUrlPrefix := "" // "/namespaces/" + namespace
 		pv := &kapi.PersistentVolume{}
 		osrGetPV := openshift.NewOpenshiftREST(nil)
 		osrGetPV.KGet(openshiftUrlPrefix+"/persistentvolumes/"+pvName, pv)
 		if osrGetPV.Err != nil {
 			glog.Warningf("get pv %s info error:%v", pvName, osrGetPV.Err)
-			RespError(w, osrGetPV.Err, http.StatusBadRequest)
+			//RespError(w, osrGetPV.Err, http.StatusBadRequest)
 			return
 		}
 		// delete pv
-		openshiftUrlPrefix := "" // "/namespaces/" + namespace
 
 		osrDeletePV := openshift.NewOpenshiftREST(nil)
 		osrDeletePV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+pv.Name, nil)
@@ -368,14 +370,14 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		glusterfs := pv.Spec.PersistentVolumeSource.Glusterfs
 		if glusterfs != nil {
-			volId := pv.Annotations["datafoundry.io/gluster-volume"] //VolumeName2VolumeId(glusterfs.Path)
+			volId := VolumeName2VolumeId(glusterfs.Path) //pv.Annotations["datafoundry.io/gluster-volume"] //
 			err := hkiClient.VolumeDelete(volId)
 			if err != nil {
 				glog.Infof("delete volume error: pvcname=%s, volid=%s, error: %s", pvcname, volId, err)
 
 				// todo: log it
 			} else {
-				glog.Info("delete volume success, volumeid=%s", volId)
+				glog.Info("delete volume success, volumeid:", volId)
 			}
 		} else {
 			glog.Infof("pv.Spec.PersistentVolumeSource.Glusterfs == nil. pvcname=%s", pvcname)

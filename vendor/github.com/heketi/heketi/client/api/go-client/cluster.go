@@ -98,8 +98,8 @@ func (c *Client) ClusterList() (*api.ClusterListResponse, error) {
 	// Create request
 	req, err := http.NewRequest("GET", c.host+"/clusters", nil)
 
-	println("111 >>> " + (c.host + "/clusters"))
-	println("error: ", err)
+	// println("111 >>> " + (c.host + "/clusters"))
+	// println("error: ", err)
 
 	if err != nil {
 		return nil, err
@@ -108,8 +108,8 @@ func (c *Client) ClusterList() (*api.ClusterListResponse, error) {
 	// Set token
 	err = c.setToken(req)
 
-	println("222 >>> " + (c.host + "/clusters"))
-	println("error: ", err)
+	// println("222 >>> " + (c.host + "/clusters"))
+	// println("error: ", err)
 
 	if err != nil {
 		return nil, err
@@ -118,8 +118,8 @@ func (c *Client) ClusterList() (*api.ClusterListResponse, error) {
 	// Get info
 	r, err := c.do(req)
 
-	println("333 >>> " + (c.host + "/clusters"))
-	println("error: ", err)
+	// println("333 >>> " + (c.host + "/clusters"))
+	// println("error: ", err)
 
 	if err != nil {
 		return nil, err

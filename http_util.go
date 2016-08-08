@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -30,13 +31,17 @@ func httpGet(url string, credential ...string) ([]byte, error) {
 	var err error
 
 	if len(credential) == 2 {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client := &http.Client{Transport: tr}
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, fmt.Errorf("[http] err %s, %s", url, err)
 		}
 		req.Header.Set(credential[0], credential[1])
 
-		resp, err = http.DefaultClient.Do(req)
+		resp, err = client.Do(req)
 		if err != nil {
 			fmt.Printf("http get err:%s", err.Error())
 			return nil, err
@@ -112,6 +117,12 @@ func httpAction(method, url string, body []byte, credential ...string) ([]byte, 
 	fmt.Println(method, url, string(body), credential)
 	var resp *http.Response
 	var err error
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, fmt.Errorf("[http] err %s, %s", url, err)
@@ -120,7 +131,7 @@ func httpAction(method, url string, body []byte, credential ...string) ([]byte, 
 	if len(credential) == 2 {
 		req.Header.Set(credential[0], credential[1])
 	}
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("[http] err %s, %s", url, err)
 	}
