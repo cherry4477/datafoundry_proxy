@@ -272,7 +272,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	//	}
 	//
 	//	osrPVC := openshift.NewOpenshiftREST(openshift.NewOpenshiftClient(retrieveToken(r)))
-	//	osrPVC.KDelete(openshiftUrlPrefix+"/persistentvolumeclaims", inputPVC)
+	//	osrPVC.KDelete(openshiftUrlPrefix+"/persistentvolumeclaims/"+inputPVC.Name, nil)
 	//	if osrPVC.Err != nil {
 	//		glog.Warningf("delete pvc error on failed to CreateVolume: pvcname=%s, error: %s", pvcname, osrPVC.Err)
 	//	}

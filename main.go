@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
+
+	"github.com/julienschmidt/httprouter"
 
 	"github.com/asiainfoLDP/datafoundry_proxy/messages"
 	"github.com/asiainfoLDP/datafoundry_proxy/openshift"
