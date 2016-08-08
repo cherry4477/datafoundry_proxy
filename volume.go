@@ -343,6 +343,7 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		osrGetPV := openshift.NewOpenshiftREST(nil)
 		osrGetPV.KGet(openshiftUrlPrefix+"/persistentvolumes/"+pvName, pv)
 		if osrGetPV.Err != nil {
+			glog.Warningf("get pv %s info error:%v", pvName, osrGetPV.Err)
 			RespError(w, osrGetPV.Err, http.StatusBadRequest)
 			return
 		}
@@ -350,11 +351,11 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		openshiftUrlPrefix := "" // "/namespaces/" + namespace
 
 		osrDeletePV := openshift.NewOpenshiftREST(nil)
-		osrDeletePV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+pv.Name, nil)
+		osrDeletePV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+pvName, nil)
 		if osrDeletePV.Err != nil {
 			// todo: retry once?
 
-			glog.Warningf("delete pv error: pvname=%s, error: %s", pv.Name, osrDeletePV.Err)
+			glog.Warningf("delete pv error: pvname=%s, error: %s", pvName, osrDeletePV.Err)
 
 			//RespError(w, osrDeletePV.Err, http.StatusBadRequest)
 			return
