@@ -133,8 +133,8 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	// todo: check permission
 
-	_ = username
-	_ = namespace
+	// _ = username
+	// _ = namespace
 
 	// ...
 
@@ -157,7 +157,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		req := &api.VolumeCreateRequest{}
 		req.Size = int(size)
-		//req.Name = pvcname // ! don't set name, otherwise, can't get volume id from pv
+		req.Name = pvcname + "-" + namespace + "-" + username + "-jd" // ! don't set name, otherwise, can't get volume id from pv
 
 		req.Clusters = clusterlist.Clusters //[]string{"68aa170df797272ac2ac90fac1f7460b"} //hacked by san
 		req.Durability.Type = api.DurabilityReplicate
@@ -200,6 +200,9 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		{
 			inputPV.Kind = "PersistentVolume"
 			inputPV.APIVersion = "v1"
+			inputPV.Annotations = make(map[string]string)
+			inputPV.Annotations["datafoundry.io/gluster-volume"] = volume.Id
+			inputPV.Annotations["datafoundry.io/requester"] = username + "@" + namespace
 			inputPV.Name = PvcName2PvName(namespace, pvcname)
 			inputPV.Spec.Capacity = resourceList
 			inputPV.Spec.PersistentVolumeSource = kapi.PersistentVolumeSource{
@@ -351,11 +354,11 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		openshiftUrlPrefix := "" // "/namespaces/" + namespace
 
 		osrDeletePV := openshift.NewOpenshiftREST(nil)
-		osrDeletePV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+pvName, nil)
+		osrDeletePV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+pv.Name, nil)
 		if osrDeletePV.Err != nil {
 			// todo: retry once?
 
-			glog.Warningf("delete pv error: pvname=%s, error: %s", pvName, osrDeletePV.Err)
+			glog.Warningf("delete pv error: pvname=%s, error: %s", pv.Name, osrDeletePV.Err)
 
 			//RespError(w, osrDeletePV.Err, http.StatusBadRequest)
 			return
@@ -365,7 +368,7 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		glusterfs := pv.Spec.PersistentVolumeSource.Glusterfs
 		if glusterfs != nil {
-			volId := VolumeName2VolumeId(glusterfs.Path)
+			volId := pv.Annotations["datafoundry.io/gluster-volume"] //VolumeName2VolumeId(glusterfs.Path)
 			err := hkiClient.VolumeDelete(volId)
 			if err != nil {
 				glog.Infof("delete volume error: pvcname=%s, volid=%s, error: %s", pvcname, volId, err)
