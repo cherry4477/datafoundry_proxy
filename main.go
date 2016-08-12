@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
 
+	"github.com/julienschmidt/httprouter"
+
 	"github.com/asiainfoLDP/datafoundry_proxy/messages"
+	"github.com/asiainfoLDP/datafoundry_proxy/openshift"
 )
 
 type mux struct{}
@@ -48,6 +50,7 @@ func main() {
 	router.GET("/lapi/inbox_stat", GetMessageStat)  //get msgs
 	router.PUT("/lapi/inbox/:id", ModifyMessage)    //mark msg as read.
 	router.DELETE("/lapi/inbox/:id", DeleteMessage) //mark msg as read.
+
 	//organizations
 	router.GET("/lapi/orgs", ListOrganizations)
 	router.POST("/lapi/orgs", CreateOrganization)
@@ -61,7 +64,11 @@ func main() {
 	// router.PUT("/lapi/orgs/:org/privileged", ManageOrganization) //
 	//action=privileged,remove,
 
+	router.POST("/lapi/v1/namespaces/:namespace/volumes", CreateVolume)
+	router.DELETE("/lapi/v1/namespaces/:namespace/volumes/:name", DeleteVolume)
+
 	go messages.Init( /*router, */ MysqlEnv, nil /*KafkaEnv*/, EmailEnv)
+	go openshift.Init(DataFoundryEnv)
 
 	router.NotFound = &mux{}
 

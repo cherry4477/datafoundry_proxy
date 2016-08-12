@@ -62,6 +62,10 @@ func checkToken(r *http.Request) (string, bool) {
 	return auth, true
 }
 
+func retrieveToken(r *http.Request) string {
+	return r.Header.Get("Authorization")
+}
+
 func getProfile(user string) (etcdvalue interface{}, err error) {
 	glog.Info("user", user)
 	if len(user) == 0 {

@@ -2,13 +2,15 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	etcd "github.com/coreos/etcd/client"
 	"github.com/go-ldap/ldap"
 	"github.com/golang/glog"
-	"io/ioutil"
-	"net/http"
 )
 
 func httpPost(url string, body []byte, credential ...string) ([]byte, error) {
@@ -29,13 +31,17 @@ func httpGet(url string, credential ...string) ([]byte, error) {
 	var err error
 
 	if len(credential) == 2 {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client := &http.Client{Transport: tr}
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, fmt.Errorf("[http] err %s, %s", url, err)
 		}
 		req.Header.Set(credential[0], credential[1])
 
-		resp, err = http.DefaultClient.Do(req)
+		resp, err = client.Do(req)
 		if err != nil {
 			fmt.Printf("http get err:%s", err.Error())
 			return nil, err
@@ -111,6 +117,12 @@ func httpAction(method, url string, body []byte, credential ...string) ([]byte, 
 	fmt.Println(method, url, string(body), credential)
 	var resp *http.Response
 	var err error
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, fmt.Errorf("[http] err %s, %s", url, err)
@@ -119,7 +131,7 @@ func httpAction(method, url string, body []byte, credential ...string) ([]byte, 
 	if len(credential) == 2 {
 		req.Header.Set(credential[0], credential[1])
 	}
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("[http] err %s, %s", url, err)
 	}
@@ -194,6 +206,20 @@ func RespOK(w http.ResponseWriter, data interface{}) {
 	}
 }
 
+func RespAccepted(w http.ResponseWriter, data interface{}) {
+	if data == nil {
+		data = genRespJson(http.StatusAccepted, nil)
+	}
+
+	if body, err := json.MarshalIndent(data, "", "  "); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		w.Write(body)
+	}
+}
+
 func genRespJson(httpCode int, err error) *APIResponse {
 	resp := new(APIResponse)
 	var msgCode int
@@ -220,7 +246,7 @@ func genRespJson(httpCode int, err error) *APIResponse {
 			message = e.Message
 		} else {
 			msgCode = ErrCodeUnknownError
-			message = e.Error()
+			message = err.Error()
 		}
 	}
 
