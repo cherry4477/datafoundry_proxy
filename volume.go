@@ -194,8 +194,6 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		// create pv
 
-		openshiftUrlPrefix := "" //pv is a cluster scoped resouece. "/namespaces/" + namespace
-
 		inputPV := &kapi.PersistentVolume{}
 		{
 			inputPV.Kind = "PersistentVolume"
@@ -219,7 +217,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 		outputPV := &kapi.PersistentVolume{}
 		osrPV := openshift.NewOpenshiftREST(nil)
-		osrPV.KPost(openshiftUrlPrefix+"/persistentvolumes", inputPV, outputPV)
+		osrPV.KPost("/persistentvolumes", inputPV, outputPV)
 		if osrPV.Err != nil {
 			glog.Warningf("create pv error CreateVolume: pvname=%s, error: %s", inputPV.Name, osrPV.Err)
 
@@ -233,19 +231,39 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 			}
 
 			osrPV := openshift.NewOpenshiftREST(nil)
-			osrPV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+inputPV.Name, nil)
+			osrPV.KDelete("/persistentvolumes/"+inputPV.Name, nil)
 			if osrPV.Err != nil {
 				glog.Warningf("delete pv error on failed to CreateVolume: pvname=%s, error: %s", inputPV.Name, osrPV.Err)
 			}
 		}()
 
 		succeeded = true
-		glog.Warningf("create volume(%s) by %s@%s successfuly.", volume.Id, username, namespace)
+		glog.Infof("create volume(%s) by %s@%s successfuly.", volume.Id, username, namespace)
+
+		// update pvc
+
+		currentPVC := &kapi.PersistentVolumeClaim{}
+		osrPVC := openshift.NewOpenshiftREST(openshift.NewOpenshiftClient(retrieveToken(r)))
+		osrPVC.KGet("/namespaces/"+namespace+"/persistentvolumeclaims/"+pvcname, currentPVC)
+		if osrPVC.Err != nil {
+			glog.Warningf("get pvc error on failed to CreateVolume: pvname=%s, error: %s", pvcname, osrPVC.Err)
+			return
+		}
+
+		if currentPVC.Annotations == nil {
+			currentPVC.Annotations = make(map[string]string)
+			currentPVC.Annotations["datafoundry.io/gluster-volume"] = volume.Id
+			currentPVC.Annotations["datafoundry.io/requester"] = username + "@" + namespace
+		}
+
+		osrPVC.KPut("/namespaces/"+namespace+"/persistentvolumeclaims/"+pvcname, &currentPVC, nil)
+		if osrPVC.Err != nil {
+			glog.Warningf("update pvc error on CreateVolume: pvcname=%s, error: %s", pvcname, osrPVC.Err)
+			return
+		}
 	}()
 
 	// create pvc
-
-	openshiftUrlPrefix := "/namespaces/" + namespace
 
 	inputPVC := &kapi.PersistentVolumeClaim{}
 	{
@@ -262,7 +280,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	outputPVC := &kapi.PersistentVolumeClaim{}
 	osrPVC := openshift.NewOpenshiftREST(openshift.NewOpenshiftClient(retrieveToken(r)))
-	osrPVC.KPost(openshiftUrlPrefix+"/persistentvolumeclaims", &inputPVC, &outputPVC)
+	osrPVC.KPost("/namespaces/"+namespace+"/persistentvolumeclaims", &inputPVC, &outputPVC)
 	if osrPVC.Err != nil {
 		glog.Warningf("create pvc error on CreateVolume: pvcname=%s, error: %s", pvcname, osrPVC.Err)
 
@@ -276,7 +294,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	//	}
 	//
 	//	osrPVC := openshift.NewOpenshiftREST(openshift.NewOpenshiftClient(retrieveToken(r)))
-	//	osrPVC.KDelete(openshiftUrlPrefix+"/persistentvolumeclaims/"+inputPVC.Name, nil)
+	//	osrPVC.KDelete("/namespaces/"+namespace+"/persistentvolumeclaims/"+inputPVC.Name, nil)
 	//	if osrPVC.Err != nil {
 	//		glog.Warningf("delete pvc error on failed to CreateVolume: pvcname=%s, error: %s", pvcname, osrPVC.Err)
 	//	}
@@ -329,10 +347,8 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	// delete pvc
 
 	// func() {
-	openshiftUrlPrefix := "/namespaces/" + namespace
-
 	osrDeletePVC := openshift.NewOpenshiftREST(openshift.NewOpenshiftClient(retrieveToken(r)))
-	osrDeletePVC.KDelete(openshiftUrlPrefix+"/persistentvolumeclaims/"+pvcname, nil)
+	osrDeletePVC.KDelete("/namespaces/" + namespace+"/persistentvolumeclaims/"+pvcname, nil)
 	if osrDeletePVC.Err != nil {
 		glog.Infof("delete pvc error: pvcname=%s, error: %s", pvcname, osrDeletePVC.Err)
 		RespError(w, osrDeletePVC.Err, http.StatusBadRequest)
@@ -344,10 +360,9 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	go func() {
 		//get pv
-		openshiftUrlPrefix := "" // "/namespaces/" + namespace
 		pv := &kapi.PersistentVolume{}
 		osrGetPV := openshift.NewOpenshiftREST(nil)
-		osrGetPV.KGet(openshiftUrlPrefix+"/persistentvolumes/"+pvName, pv)
+		osrGetPV.KGet("/persistentvolumes/"+pvName, pv)
 		if osrGetPV.Err != nil {
 			glog.Warningf("get pv %s info error:%v", pvName, osrGetPV.Err)
 			//RespError(w, osrGetPV.Err, http.StatusBadRequest)
@@ -356,7 +371,7 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		// delete pv
 
 		osrDeletePV := openshift.NewOpenshiftREST(nil)
-		osrDeletePV.KDelete(openshiftUrlPrefix+"/persistentvolumes/"+pv.Name, nil)
+		osrDeletePV.KDelete("/persistentvolumes/"+pv.Name, nil)
 		if osrDeletePV.Err != nil {
 			// todo: retry once?
 
@@ -390,4 +405,3 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	RespOK(w, nil)
 }
 
-//===============================================================
