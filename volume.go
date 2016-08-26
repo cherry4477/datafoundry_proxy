@@ -142,18 +142,17 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	resourceList[kapi.ResourceStorage] = *kapiresource.NewQuantity(int64(size*Gi), kapiresource.BinarySI)
 
 	// create volumn
+	hkiClient := heketiClient()
+
+	_, _ = hkiClient.ClusterList() // test
+	clusterlist, err := hkiClient.ClusterList()
+	if err != nil {
+		glog.Error(err)
+		RespError(w, err, http.StatusInternalServerError)
+		return
+	}
 
 	go func() {
-
-		hkiClient := heketiClient()
-
-		_, _ = hkiClient.ClusterList() // test
-		clusterlist, err := hkiClient.ClusterList()
-		if err != nil {
-			glog.Error(err)
-			//RespError(w, err, http.StatusBadRequest)
-			return
-		}
 
 		req := &api.VolumeCreateRequest{}
 		req.Size = int(size)
