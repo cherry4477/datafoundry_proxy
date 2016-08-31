@@ -32,7 +32,8 @@ func httpGet(url string, credential ...string) ([]byte, error) {
 
 	if len(credential) == 2 {
 		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			DisableKeepAlives: true,
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		}
 		client := &http.Client{Transport: tr}
 		req, err := http.NewRequest("GET", url, nil)
@@ -46,6 +47,7 @@ func httpGet(url string, credential ...string) ([]byte, error) {
 			fmt.Printf("http get err:%s", err.Error())
 			return nil, err
 		}
+		defer resp.Body.Close()
 		switch resp.StatusCode {
 		case 404:
 			return nil, ldpErrorNew(ErrCodeNotFound)
@@ -61,6 +63,7 @@ func httpGet(url string, credential ...string) ([]byte, error) {
 			fmt.Printf("http get err:%s", err.Error())
 			return nil, err
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
 			return nil, fmt.Errorf("[http get] status err %s, %d", url, resp.StatusCode)
 		}
@@ -109,7 +112,7 @@ func httpGetFunc(url string, f func(resp *http.Response), credential ...string) 
 			return nil, fmt.Errorf("[http get] status err %s, %d", url, resp.StatusCode)
 		}
 	}
-
+	defer resp.Body.Close()
 	return ioutil.ReadAll(resp.Body)
 }
 
