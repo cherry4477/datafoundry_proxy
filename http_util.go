@@ -122,7 +122,8 @@ func httpAction(method, url string, body []byte, credential ...string) ([]byte, 
 	var err error
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true,
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
 
