@@ -153,7 +153,8 @@ func (user *UserInfo) CreateProject(org *Orgnazition) (err error) {
 	} else {
 
 		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			DisableKeepAlives: true,
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		}
 		client := &http.Client{Transport: tr}
 		req, _ := http.NewRequest("POST", project_url, bytes.NewBuffer(reqbody))
@@ -164,6 +165,7 @@ func (user *UserInfo) CreateProject(org *Orgnazition) (err error) {
 		if err != nil {
 			glog.Error(err)
 		} else {
+			defer resp.Body.Close()
 			glog.Infoln(req.Host, req.Method, req.URL.RequestURI(), req.Proto, resp.StatusCode)
 			b, _ := ioutil.ReadAll(resp.Body)
 			glog.Infoln(string(b))

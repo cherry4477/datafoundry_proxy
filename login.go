@@ -84,9 +84,11 @@ func logingitlab(basic string, auth map[string]string) {
 	resp, err := client.Do(req)
 	if err != nil {
 		glog.Error(err)
-	} else {
-		glog.Infoln(req.Host, req.Method, req.URL.RequestURI(), req.Proto, resp.StatusCode)
+		return
 	}
+	defer resp.Body.Close()
+	glog.Infoln(req.Host, req.Method, req.URL.RequestURI(), req.Proto, resp.StatusCode)
+
 	return
 }
 
@@ -94,7 +96,8 @@ func token_proxy(auth string) (token string, status int) {
 	//fmt.Println("prepear to get token from", url, "with", auth)
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true,
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		//RoundTrip:       roundTrip,
 	}
 
@@ -104,13 +107,13 @@ func token_proxy(auth string) (token string, status int) {
 	req.Header.Set("Authorization", auth)
 
 	resp, err := DefaultTransport.RoundTrip(req)
-	//defer resp.Body.Close()
 
 	//resp, err := client.Do(req)
 	if err != nil {
 		glog.Error(err)
 		return "", http.StatusInternalServerError
 	} else {
+		defer resp.Body.Close()
 		url, err := resp.Location()
 		if err == nil {
 			//fmt.Println("resp", url.Fragment)
