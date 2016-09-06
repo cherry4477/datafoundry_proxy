@@ -67,6 +67,9 @@ func main() {
 	router.POST("/lapi/v1/namespaces/:namespace/volumes", CreateVolume)
 	router.DELETE("/lapi/v1/namespaces/:namespace/volumes/:name", DeleteVolume)
 
+	router.GET("/lapi/v1/backingservices/:backingservice", BackingServiceHandler)
+	router.GET("/lapi/v1/backingservices", BackingServiceListHandler)
+
 	go messages.Init( /*router, */ MysqlEnv, nil /*KafkaEnv*/, EmailEnv)
 	go openshift.Init(DataFoundryEnv)
 

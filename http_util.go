@@ -11,6 +11,8 @@ import (
 	etcd "github.com/coreos/etcd/client"
 	"github.com/go-ldap/ldap"
 	"github.com/golang/glog"
+
+	"github.com/asiainfoLDP/datafoundry_proxy/openshift"
 )
 
 func httpPost(url string, body []byte, credential ...string) ([]byte, error) {
@@ -248,6 +250,15 @@ func genRespJson(httpCode int, err error) *APIResponse {
 		} else if e, ok := err.(*LdpError); ok {
 			msgCode = e.Code
 			message = e.Message
+		} else if e, ok := err.(*openshift.OpenshiftREST); ok {
+			httpCode = e.Status.Code
+			msgCode = httpCode
+			message = e.Status.Message
+
+		} else if e, ok := err.(openshift.OpenshiftREST); ok {
+			httpCode = e.Status.Code
+			msgCode = httpCode
+			message = e.Status.Message
 		} else {
 			msgCode = ErrCodeUnknownError
 			message = err.Error()

@@ -25,6 +25,7 @@ import (
 
 	"github.com/openshift/origin/pkg/cmd/util/tokencmd"
 
+	"k8s.io/kubernetes/pkg/api/unversioned"
 	kapi "k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/util/yaml"
 	//"github.com/ghodss/yaml"
@@ -244,8 +245,9 @@ func (oc *OpenshiftClient) KRequest (method, uri string, body []byte) ([]byte, e
 */
 
 type OpenshiftREST struct {
-	oc  *OpenshiftClient
-	Err error
+	oc     *OpenshiftClient
+	Err    error
+	Status unversioned.Status
 }
 
 //func NewOpenshiftREST(oc *OpenshiftClient) *OpenshiftREST {
@@ -290,6 +292,7 @@ func (osr *OpenshiftREST) doRequest(method, url string, bodyParams interface{}, 
 
 	if res.StatusCode < 200 || res.StatusCode >= 400 {
 		osr.Err = errors.New(string(data))
+		_ = json.Unmarshal(data, &osr.Status)
 	} else {
 		if into != nil {
 			//println("into data = ", string(data), "\n")
@@ -329,6 +332,10 @@ func buildUriWithSelector(uri string, selector map[string]string) string {
 }
 
 // o
+
+func (osr OpenshiftREST) Error() string {
+	return fmt.Sprintf("%v", osr.Status.Message)
+}
 
 func (osr *OpenshiftREST) OList(uri string, selector map[string]string, into interface{}) *OpenshiftREST {
 
