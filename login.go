@@ -156,7 +156,7 @@ func init() {
 
 	api_aws := os.Getenv("DATAFOUNDRY_APISERVER_AWS_ADDR")
 	if len(api_aws) > 0 {
-		region_jd = "https://" + api_aws + "/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
+		region_aws = "https://" + api_aws + "/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
 	}
 
 	oauthserver := os.Getenv("DATAFOUNDRY_OAUTH_URL")
