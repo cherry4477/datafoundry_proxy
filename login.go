@@ -123,7 +123,7 @@ func token_proxy(auth, apiserver string, extraOpt bool) (token string, status in
 			r, _ := json.Marshal(n)
 			if extraOpt {
 				go logingitlab(auth, n)
-				checkIfInitProject(n)
+				go checkIfInitProject(n)
 			}
 			return string(r), resp.StatusCode
 		}
