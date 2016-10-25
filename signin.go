@@ -55,7 +55,7 @@ func SignIn(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 				tokensBytes, _ := json.MarshalIndent(tokens, "", "  ")
 				resphttp(w, http.StatusOK, tokensBytes)
 			} else {
-				RespError(w, ldpErrorNew(ErrCodeUnknownError), http.StatusInternalServerError)
+				RespError(w, ldpErrorNew(ErrCodeUnauthorized), http.StatusUnauthorized)
 			}
 
 		} else {
