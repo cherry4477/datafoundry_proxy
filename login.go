@@ -12,7 +12,8 @@ import (
 	"strings"
 )
 
-var apiserver = "https://dev.dataos.io:8443/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
+var region_jd = "https://dev.dataos.io:8443/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
+var region_aws = "https://lab.asiainfodata.com:8443/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
 var oauthurl = "https://datafoundry-oauth.app.dataos.io/v1/repos/gitlab/login"
 var gitlaburl = "https://code.dataos.io"
 
@@ -26,7 +27,7 @@ func Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		auth := r.Header.Get("Authorization")
 		if len(auth) > 0 {
 			glog.Infoln(auth)
-			token, status := token_proxy(auth)
+			token, status := token_proxy(auth, region_jd, true)
 			if len(token) > 0 {
 				glog.Infoln(token)
 
@@ -84,17 +85,20 @@ func logingitlab(basic string, auth map[string]string) {
 	resp, err := client.Do(req)
 	if err != nil {
 		glog.Error(err)
-	} else {
-		glog.Infoln(req.Host, req.Method, req.URL.RequestURI(), req.Proto, resp.StatusCode)
+		return
 	}
+	defer resp.Body.Close()
+	glog.Infoln(req.Host, req.Method, req.URL.RequestURI(), req.Proto, resp.StatusCode)
+
 	return
 }
 
-func token_proxy(auth string) (token string, status int) {
+func token_proxy(auth, apiserver string, extraOpt bool) (token string, status int) {
 	//fmt.Println("prepear to get token from", url, "with", auth)
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true,
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		//RoundTrip:       roundTrip,
 	}
 
@@ -104,21 +108,23 @@ func token_proxy(auth string) (token string, status int) {
 	req.Header.Set("Authorization", auth)
 
 	resp, err := DefaultTransport.RoundTrip(req)
-	//defer resp.Body.Close()
 
 	//resp, err := client.Do(req)
 	if err != nil {
 		glog.Error(err)
 		return "", http.StatusInternalServerError
 	} else {
+		defer resp.Body.Close()
 		url, err := resp.Location()
 		if err == nil {
 			//fmt.Println("resp", url.Fragment)
 			m := strings.Split(url.Fragment, "&")
 			n := proc(m)
 			r, _ := json.Marshal(n)
-			go logingitlab(auth, n)
-			checkIfInitProject(n)
+			if extraOpt {
+				go logingitlab(auth, n)
+				go checkIfInitProject(n)
+			}
 			return string(r), resp.StatusCode
 		}
 	}
@@ -143,9 +149,14 @@ func resphttp(rw http.ResponseWriter, code int, body []byte) {
 }
 
 func init() {
-	api := os.Getenv("DATAFOUNDRY_APISERVER_ADDR")
-	if len(api) > 0 {
-		apiserver = "https://" + api + "/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
+	api_jd := os.Getenv("DATAFOUNDRY_APISERVER_ADDR")
+	if len(api_jd) > 0 {
+		region_jd = "https://" + api_jd + "/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
+	}
+
+	api_aws := os.Getenv("DATAFOUNDRY_APISERVER_AWS_ADDR")
+	if len(api_aws) > 0 {
+		region_aws = "https://" + api_aws + "/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
 	}
 
 	oauthserver := os.Getenv("DATAFOUNDRY_OAUTH_URL")
@@ -157,7 +168,8 @@ func init() {
 	if len(gitserver) > 0 {
 		gitlaburl = gitserver
 	}
-	glog.Infoln("apiserver", apiserver)
+	glog.Infoln("region_jd", region_jd)
+	glog.Infoln("region_aws", region_aws)
 	glog.Infoln("oauthurl", oauthurl)
 	glog.Infoln("gitlaburl", gitlaburl)
 }

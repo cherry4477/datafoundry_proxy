@@ -39,6 +39,7 @@ func main() {
 	//router.GET("/lapi/authenticity_token", Hello)
 	router.GET("/lapi/login", Login)
 	router.GET("/login", Login)
+	router.GET("/signin", SignIn)
 	router.POST("/lapi/signup", SignUp)
 	router.GET("/lapi/user/profile", Profile)
 	router.POST("/lapi/password_reset", Hello)          //account_identifier with token.
@@ -67,11 +68,14 @@ func main() {
 	router.POST("/lapi/v1/namespaces/:namespace/volumes", CreateVolume)
 	router.DELETE("/lapi/v1/namespaces/:namespace/volumes/:name", DeleteVolume)
 
+	router.GET("/lapi/v1/backingservices/:backingservice", BackingServiceHandler)
+	router.GET("/lapi/v1/backingservices", BackingServiceListHandler)
+
 	go messages.Init( /*router, */ MysqlEnv, nil /*KafkaEnv*/, EmailEnv)
 	go openshift.Init(DataFoundryEnv)
 
 	router.NotFound = &mux{}
-
+	log.Println("listening on port 9090")
 	log.Fatal(http.ListenAndServe(":9090", router))
 }
 

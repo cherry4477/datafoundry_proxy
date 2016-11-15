@@ -11,6 +11,8 @@ import (
 	etcd "github.com/coreos/etcd/client"
 	"github.com/go-ldap/ldap"
 	"github.com/golang/glog"
+
+	"github.com/asiainfoLDP/datafoundry_proxy/openshift"
 )
 
 func httpPost(url string, body []byte, credential ...string) ([]byte, error) {
@@ -32,7 +34,8 @@ func httpGet(url string, credential ...string) ([]byte, error) {
 
 	if len(credential) == 2 {
 		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			DisableKeepAlives: true,
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		}
 		client := &http.Client{Transport: tr}
 		req, err := http.NewRequest("GET", url, nil)
@@ -46,6 +49,7 @@ func httpGet(url string, credential ...string) ([]byte, error) {
 			fmt.Printf("http get err:%s", err.Error())
 			return nil, err
 		}
+		defer resp.Body.Close()
 		switch resp.StatusCode {
 		case 404:
 			return nil, ldpErrorNew(ErrCodeNotFound)
@@ -61,6 +65,7 @@ func httpGet(url string, credential ...string) ([]byte, error) {
 			fmt.Printf("http get err:%s", err.Error())
 			return nil, err
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
 			return nil, fmt.Errorf("[http get] status err %s, %d", url, resp.StatusCode)
 		}
@@ -109,7 +114,7 @@ func httpGetFunc(url string, f func(resp *http.Response), credential ...string) 
 			return nil, fmt.Errorf("[http get] status err %s, %d", url, resp.StatusCode)
 		}
 	}
-
+	defer resp.Body.Close()
 	return ioutil.ReadAll(resp.Body)
 }
 
@@ -119,7 +124,8 @@ func httpAction(method, url string, body []byte, credential ...string) ([]byte, 
 	var err error
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true,
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
 
@@ -244,6 +250,15 @@ func genRespJson(httpCode int, err error) *APIResponse {
 		} else if e, ok := err.(*LdpError); ok {
 			msgCode = e.Code
 			message = e.Message
+		} else if e, ok := err.(*openshift.OpenshiftREST); ok {
+			httpCode = e.Status.Code
+			msgCode = httpCode
+			message = e.Status.Message
+
+		} else if e, ok := err.(openshift.OpenshiftREST); ok {
+			httpCode = e.Status.Code
+			msgCode = httpCode
+			message = e.Status.Message
 		} else {
 			msgCode = ErrCodeUnknownError
 			message = err.Error()

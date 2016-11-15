@@ -30,7 +30,7 @@ const (
 )
 
 var invalidVolumnSize = fmt.Errorf(
-	"volumn size must in range [%d, %d]",
+	"volumn size must be integer multiple of 10G and in range [%d, %d].",
 	MinVolumnSize, MaxVolumnSize)
 
 func heketiClient() *heketi.Client {
@@ -132,7 +132,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		RespError(w, e, http.StatusBadRequest)
 		return
 	}
-	if size < MinVolumnSize || size > MaxVolumnSize {
+	if size < MinVolumnSize || size > MaxVolumnSize || (size%10) != 0 {
 		RespError(w, invalidVolumnSize, http.StatusBadRequest)
 		return
 	}
@@ -159,18 +159,17 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	resourceList[kapi.ResourceStorage] = *kapiresource.NewQuantity(int64(size*Gi), kapiresource.BinarySI)
 
 	// create volumn
+	hkiClient := heketiClient()
+
+	_, _ = hkiClient.ClusterList() // test
+	clusterlist, err := hkiClient.ClusterList()
+	if err != nil {
+		glog.Error(err)
+		RespError(w, err, http.StatusInternalServerError)
+		return
+	}
 
 	go func() {
-
-		hkiClient := heketiClient()
-
-		_, _ = hkiClient.ClusterList() // test
-		clusterlist, err := hkiClient.ClusterList()
-		if err != nil {
-			glog.Error(err)
-			RespError(w, err, http.StatusBadRequest)
-			return
-		}
 
 		req := &api.VolumeCreateRequest{}
 		req.Size = int(size)
@@ -239,7 +238,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 		if osrPV.Err != nil {
 			glog.Warningf("create pv error CreateVolume: pvname=%s, error: %s", inputPV.Name, osrPV.Err)
 
-			RespError(w, osrPV.Err, http.StatusBadRequest)
+			//RespError(w, osrPV.Err, http.StatusBadRequest)
 			return
 		}
 		defer func() {
@@ -302,7 +301,7 @@ func CreateVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 	if osrPVC.Err != nil {
 		glog.Warningf("create pvc error on CreateVolume: pvcname=%s, error: %s", pvcname, osrPVC.Err)
 
-		RespError(w, osrPVC.Err, http.StatusBadRequest)
+		//RespError(w, osrPVC.Err, http.StatusBadRequest)
 		return
 	}
 
@@ -380,7 +379,7 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	// func() {
 	osrDeletePVC := openshift.NewOpenshiftREST(openshift.NewOpenshiftClient(retrieveToken(r)))
-	osrDeletePVC.KDelete("/namespaces/" + namespace+"/persistentvolumeclaims/"+pvcname, nil)
+	osrDeletePVC.KDelete("/namespaces/"+namespace+"/persistentvolumeclaims/"+pvcname, nil)
 	if osrDeletePVC.Err != nil {
 		glog.Infof("delete pvc error: pvcname=%s, error: %s", pvcname, osrDeletePVC.Err)
 		RespError(w, osrDeletePVC.Err, http.StatusBadRequest)
@@ -439,4 +438,3 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	RespOK(w, nil)
 }
-

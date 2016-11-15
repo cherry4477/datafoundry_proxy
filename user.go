@@ -5,16 +5,16 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/go-ldap/ldap"
-	"github.com/golang/glog"
-	oapi "github.com/openshift/origin/pkg/user/api/v1"
 	"io/ioutil"
-	kapi "k8s.io/kubernetes/pkg/api/v1"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/asiainfoLDP/datafoundry_proxy/messages"
+	"github.com/go-ldap/ldap"
+	"github.com/golang/glog"
+	oapi "github.com/openshift/origin/pkg/user/api/v1"
+	kapi "k8s.io/kubernetes/pkg/api/v1"
 )
 
 func (usr *UserInfo) IfExist() (bool, error) {
@@ -153,7 +153,8 @@ func (user *UserInfo) CreateProject(org *Orgnazition) (err error) {
 	} else {
 
 		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			DisableKeepAlives: true,
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		}
 		client := &http.Client{Transport: tr}
 		req, _ := http.NewRequest("POST", project_url, bytes.NewBuffer(reqbody))
@@ -164,6 +165,7 @@ func (user *UserInfo) CreateProject(org *Orgnazition) (err error) {
 		if err != nil {
 			glog.Error(err)
 		} else {
+			defer resp.Body.Close()
 			glog.Infoln(req.Host, req.Method, req.URL.RequestURI(), req.Proto, resp.StatusCode)
 			b, _ := ioutil.ReadAll(resp.Body)
 			glog.Infoln(string(b))
