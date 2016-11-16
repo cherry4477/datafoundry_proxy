@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"encoding/base64"
+	"encoding/base32"
 
 	"github.com/golang/glog"
 	"github.com/julienschmidt/httprouter"
@@ -52,13 +52,26 @@ func glusterEndpointsName() string {
 //
 //==============================================================
 
-func NewElevenLengthID() string {
+//func NewElevenLengthID() string {
+//	t := time.Now().UnixNano()
+//	bs := make([]byte, 8)
+//	for i := uint(0); i < 8; i ++ {
+//		bs[i] = byte((t >> i) & 0xff)
+//	}
+//	return string(base64.RawURLEncoding.EncodeToString(bs))
+//}
+
+var base32Encoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
+func NewThirteenLengthID() string {
 	t := time.Now().UnixNano()
 	bs := make([]byte, 8)
 	for i := uint(0); i < 8; i ++ {
 		bs[i] = byte((t >> i) & 0xff)
 	}
-	return string(base64.RawURLEncoding.EncodeToString(bs))
+	
+	dest := make([]byte, 16)
+	base32Encoding.Encode(dest, bs)
+	return string(dest[:13])
 }
 
 //func PvcName2PvName(namespace, volName string) string {
@@ -68,7 +81,7 @@ func NewElevenLengthID() string {
 // volSource: "gluster", ...
 // volSize: GB
 func BuildRandomPvName(volSource string, volSize int) string {
-	return fmt.Sprintf("%s-%dG-%s", volSource, volSize, NewElevenLengthID())
+	return fmt.Sprintf("%s-%dG-%s", volSource, volSize, NewThirteenLengthID())
 }
 
 func VolumeId2VolumeName(volId string) string {
