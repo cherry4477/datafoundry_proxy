@@ -81,7 +81,7 @@ func NewThirteenLengthID() string {
 // volSource: "gluster", ...
 // volSize: GB
 func BuildRandomPvName(volSource string, volSize int) string {
-	return fmt.Sprintf("%s-%dG-%s", volSource, volSize, NewThirteenLengthID())
+	return fmt.Sprintf("%s-%dg-%s", strings.ToLower(volSource), volSize, NewThirteenLengthID())
 }
 
 func VolumeId2VolumeName(volId string) string {
