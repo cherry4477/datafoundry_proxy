@@ -65,8 +65,10 @@ func main() {
 	// router.PUT("/lapi/orgs/:org/privileged", ManageOrganization) //
 	//action=privileged,remove,
 
+	//>> todo: the two will be removed
 	router.POST("/lapi/v1/namespaces/:namespace/volumes", CreateVolume)
 	router.DELETE("/lapi/v1/namespaces/:namespace/volumes/:name", DeleteVolume)
+	//<<
 
 	router.GET("/lapi/v1/backingservices/:backingservice", BackingServiceHandler)
 	router.GET("/lapi/v1/backingservices", BackingServiceListHandler)
