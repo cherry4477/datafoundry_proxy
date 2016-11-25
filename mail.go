@@ -2,9 +2,9 @@ package main
 
 var bccEmail []string = []string{
 	"chaizs@asiainfo.com",
-	"jingxy3@asiainfo.com",
-	"xueys@maitewang.com",
+	"mengjing@asiainfo.com",
 	"jiangtong@asiainfo.com",
+	"datafoundry@asiainfo.com",
 }
 
 var Subject string = "Welcome to Datafoundry"

@@ -5,16 +5,16 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/go-ldap/ldap"
-	"github.com/golang/glog"
-	oapi "github.com/openshift/origin/pkg/user/api/v1"
 	"io/ioutil"
-	kapi "k8s.io/kubernetes/pkg/api/v1"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/asiainfoLDP/datafoundry_proxy/messages"
+	"github.com/go-ldap/ldap"
+	"github.com/golang/glog"
+	oapi "github.com/openshift/origin/pkg/user/api/v1"
+	kapi "k8s.io/kubernetes/pkg/api/v1"
 )
 
 func (usr *UserInfo) IfExist() (bool, error) {
