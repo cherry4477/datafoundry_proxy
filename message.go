@@ -4,21 +4,19 @@ import (
 	//"database/sql"
 	//_ "github.com/go-sql-driver/mysql"
 	"encoding/json"
+	"errors"
+	"github.com/asiainfoLDP/datafoundry_proxy/messages"
 	"github.com/golang/glog"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"strings"
-	"errors"
-	"github.com/asiainfoLDP/datafoundry_proxy/messages"
 	//"github.com/asiainfoLDP/datafoundry_proxy/messages/notification"
 	//"github.com/asiainfoLDP/datafoundry_serviceusage/usage"
 	//"log"
 	"io/ioutil"
 	"time"
-	
-	
-	
 )
+
 type Plan struct {
 	Id              int64     `json:"id,omitempty"`
 	Plan_id         string    `json:"plan_id,omitempty"`
@@ -53,66 +51,65 @@ type PurchaseOrder struct {
 	Creator           string     `json:"creator,omitempty"`
 	Resource_name     string     `json:"resource_name,omitempty"`
 }
-type MessageOrEmail struct{
-	Reason string                `json:reason,omitempty`
-	Order  PurchaseOrder         `json:order,omitempty`
-	Plan   *Plan                 `json:plan,omitempty`
+type MessageOrEmail struct {
+	Reason string        `json:reason,omitempty`
+	Order  PurchaseOrder `json:order,omitempty`
+	Plan   *Plan         `json:plan,omitempty`
 }
-const AdminUser="admin"
+
+const AdminUser = "admin"
+
 func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-    glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
-    var username string
+	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
+	var username string
 	var err error
-    
+
 	if username, err = authedIdentities(r); err != nil {
 		RespError(w, err, http.StatusUnauthorized)
 		glog.Info("don't have permission")
 		return
 	}
-	if username!=AdminUser{
+	if username != AdminUser {
 		RespError(w, errors.New("permission denied"), http.StatusUnauthorized)
 		glog.Info("is not an administrator")
 		return
-	}	
+	}
 	if r.Body == nil {
 		glog.Fatal("no message")
 		RespError(w, errors.New("no message"), http.StatusUnauthorized)
-		return 
+		return
 	}
 	defer r.Body.Close()
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		glog.Error("readall is error")
 		RespError(w, errors.New("readall is error"), http.StatusUnauthorized)
-		return 
+		return
 	}
-	 
+
 	_type := params.ByName("type")
 	var msg MessageOrEmail
-	receiver :=msg.Order.Account_id
+	receiver := msg.Order.Account_id
 	error := json.Unmarshal(data, &msg)
-	if error !=nil{
+	if error != nil {
 		RespError(w, errors.New("CreateMassageOrEmail Unmarshal error"), http.StatusUnauthorized)
 		glog.Fatal("CreateMassageOrEmail Unmarshal error")
 		return
 	}
 	switch _type {
 	case "orderevent":
-		_,error := messages.CreateInboxMessage(MessageType_Alert,receiver,AdminUser,"",string(data))
-		if error!=nil{
+		_, error := messages.CreateInboxMessage(MessageType_Alert, receiver, AdminUser, "", string(data))
+		if error != nil {
 			RespError(w, errors.New("CreateMassageOrEmail  error"), http.StatusUnauthorized)
-			return 
+			return
 		}
 	default:
 		RespError(w, errors.New("CreateMassageOrEmail  error"), http.StatusUnauthorized)
-		return	
+		return
 	}
 	RespOK(w, nil)
-	
+
 }
-
-
-
 
 func GetMessages(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
