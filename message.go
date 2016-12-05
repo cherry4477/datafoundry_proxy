@@ -15,6 +15,7 @@ import (
 	//"log"
 	"io/ioutil"
 	"time"
+	"os"
 )
 
 type Plan struct {
@@ -56,9 +57,13 @@ type MessageOrEmail struct {
 	Order  PurchaseOrder `json:order,omitempty`
 	Plan   *Plan         `json:plan,omitempty`
 }
-
-const AdminUser = "admin"
-
+var AdminUser string
+func init(){
+	AdminUser = os.Getenv("MESSAGE_SENDER_ADMIN")
+	if AdminUser == "" {
+		glog.Fatal("MESSAGE_SENDER_ADMIN can't be blank")
+	}
+}
 func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
 	var username string
