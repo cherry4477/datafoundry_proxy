@@ -86,21 +86,21 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 		RespError(w, errors.New("readall is error"), http.StatusUnauthorized)
 		return
 	}
-
 	_type := params.ByName("type")
-	var msg MessageOrEmail
-	receiver := msg.Order.Account_id
-	error := json.Unmarshal(data, &msg)
-	if error != nil {
-		RespError(w, errors.New("CreateMassageOrEmail Unmarshal error"), http.StatusUnauthorized)
-		glog.Fatal("CreateMassageOrEmail Unmarshal error")
-		return
-	}
+
 	switch _type {
 	case "orderevent":
-		_, error := messages.CreateInboxMessage(MessageType_Alert, receiver, AdminUser, "", string(data))
+		var msg MessageOrEmail
+		error := json.Unmarshal(data, &msg)
 		if error != nil {
-			RespError(w, errors.New("CreateMassageOrEmail  error"), http.StatusUnauthorized)
+			RespError(w, errors.New("CreateMassageOrEmail Unmarshal error"), http.StatusUnauthorized)
+			glog.Fatal("CreateMassageOrEmail Unmarshal error")
+			return
+		}
+		receiver := msg.Order.Account_id
+		_, error = messages.CreateInboxMessage(MessageType_Alert, receiver, AdminUser, "", string(data))
+		if error != nil {
+			RespError(w, errors.New("CreateMassageOrEmail create message failed error"), http.StatusUnauthorized)
 			return
 		}
 	default:
