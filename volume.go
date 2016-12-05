@@ -2,12 +2,12 @@ package main
 
 import (
 	//"encoding/json"
+	"encoding/base32"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
-	"encoding/base32"
 
 	"github.com/golang/glog"
 	"github.com/julienschmidt/httprouter"
@@ -62,13 +62,14 @@ func glusterEndpointsName() string {
 //}
 
 var base32Encoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567")
+
 func NewThirteenLengthID() string {
 	t := time.Now().UnixNano()
 	bs := make([]byte, 8)
-	for i := uint(0); i < 8; i ++ {
+	for i := uint(0); i < 8; i++ {
 		bs[i] = byte((t >> i) & 0xff)
 	}
-	
+
 	dest := make([]byte, 16)
 	base32Encoding.Encode(dest, bs)
 	return string(dest[:13])
@@ -372,11 +373,10 @@ func DeleteVolume(w http.ResponseWriter, r *http.Request, params httprouter.Para
 
 	// get pv (will delete it at the end, for it stores the volumn id info)
 
-
 	// get pvc (to get the pv name)
 	outputPVC := &kapi.PersistentVolumeClaim{}
 	osrGetPVC := openshift.NewOpenshiftREST(openshift.NewOpenshiftClient(retrieveToken(r)))
-	osrGetPVC.KGet("/namespaces/" + namespace+"/persistentvolumeclaims/"+pvcname, &outputPVC)
+	osrGetPVC.KGet("/namespaces/"+namespace+"/persistentvolumeclaims/"+pvcname, &outputPVC)
 	if osrGetPVC.Err != nil {
 		glog.Infof("get pvc error: pvcname=%s, error: %s", pvcname, osrGetPVC.Err)
 		RespError(w, osrGetPVC.Err, http.StatusBadRequest)
