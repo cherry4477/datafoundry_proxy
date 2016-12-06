@@ -1,120 +1,15 @@
 package main
 
 import (
-	//"database/sql"
-	//_ "github.com/go-sql-driver/mysql"
 	"encoding/json"
-	"errors"
-	"github.com/asiainfoLDP/datafoundry_proxy/messages"
 	"github.com/golang/glog"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"strings"
+
+	"github.com/asiainfoLDP/datafoundry_proxy/messages"
 	//"github.com/asiainfoLDP/datafoundry_proxy/messages/notification"
-	//"github.com/asiainfoLDP/datafoundry_serviceusage/usage"
-	//"log"
-	"io/ioutil"
-	"time"
-	"os"
 )
-
-type Plan struct {
-	Id              int64     `json:"id,omitempty"`
-	Plan_id         string    `json:"plan_id,omitempty"`
-	Plan_name       string    `json:"plan_name,omitempty"`
-	Plan_type       string    `json:"plan_type,omitempty"`
-	Plan_level      int       `json:"plan_level,omitempty"`
-	Specification1  string    `json:"specification1,omitempty"`
-	Specification2  string    `json:"specification2,omitempty"`
-	Price           float32   `json:"price,omitempty"`
-	Cycle           string    `json:"cycle,omitempty"`
-	Region          string    `json:"region,omitempty"`
-	Region_describe string    `json:"region_describe,omitempty"`
-	Create_time     time.Time `json:"creation_time,omitempty"`
-	Status          string    `json:"status,omitempty"`
-}
-type PurchaseOrder struct {
-	Id                int64      `json:"id,omitempty"`
-	Order_id          string     `json:"order_id,omitempty"`
-	Account_id        string     `json:"namespace,omitempty"` // accountId
-	Region            string     `json:"region,omitempty"`
-	Plan_id           string     `json:"plan_id,omitempty"`
-	Plan_type         string     `json:"_,omitempty"`
-	Start_time        time.Time  `json:"start_time,omitempty"`
-	End_time          time.Time  `json:"_,omitempty"`        // po
-	EndTime           *time.Time `json:"end_time,omitempty"` // vo
-	Deadline_time     time.Time  `json:"deadline,omitempty"`
-	Last_consume_id   int        `json:"_,omitempty"`
-	Ever_payed        int        `json:"_,omitempty"`
-	Num_renew_retires int        `json:"_,omitempty"`
-	Status            int        `json:"_,omitempty"`      // po
-	StatusLabel       string     `json:"status,omitempty"` // vo
-	Creator           string     `json:"creator,omitempty"`
-	Resource_name     string     `json:"resource_name,omitempty"`
-}
-type MessageOrEmail struct {
-	Reason string        `json:reason,omitempty`
-	Order  PurchaseOrder `json:order,omitempty`
-	Plan   *Plan         `json:plan,omitempty`
-}
-var AdminUser string
-func init(){
-	AdminUser = os.Getenv("MESSAGE_SENDER_ADMIN")
-	if AdminUser == "" {
-		glog.Fatal("MESSAGE_SENDER_ADMIN can't be blank")
-	}
-}
-func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
-	var username string
-	var err error
-
-	if username, err = authedIdentities(r); err != nil {
-		RespError(w, err, http.StatusUnauthorized)
-		glog.Info("don't have permission")
-		return
-	}
-	if username != AdminUser {
-		RespError(w, errors.New("permission denied"), http.StatusUnauthorized)
-		glog.Info("is not an administrator")
-		return
-	}
-	if r.Body == nil {
-		glog.Fatal("no message")
-		RespError(w, errors.New("no message"), http.StatusUnauthorized)
-		return
-	}
-	defer r.Body.Close()
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		glog.Error("readall is error")
-		RespError(w, errors.New("readall is error"), http.StatusUnauthorized)
-		return
-	}
-	_type := params.ByName("type")
-
-	switch _type {
-	case "orderevent":
-		var msg MessageOrEmail
-		error := json.Unmarshal(data, &msg)
-		if error != nil {
-			RespError(w, errors.New("CreateMassageOrEmail Unmarshal error"), http.StatusUnauthorized)
-			glog.Fatal("CreateMassageOrEmail Unmarshal error")
-			return
-		}
-		receiver := msg.Order.Account_id
-		_, error = messages.CreateInboxMessage(MessageType_Alert, receiver, AdminUser, "", string(data))
-		if error != nil {
-			RespError(w, errors.New("CreateMassageOrEmail create message failed error"), http.StatusUnauthorized)
-			return
-		}
-	default:
-		RespError(w, errors.New("CreateMassageOrEmail  error"), http.StatusUnauthorized)
-		return
-	}
-	RespOK(w, nil)
-
-}
 
 func GetMessages(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
