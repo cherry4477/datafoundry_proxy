@@ -16,6 +16,8 @@ import (
 	"io/ioutil"
 	"time"
 	"os"
+	//"strconv"
+	//"fmt"
 )
 
 type Plan struct {
@@ -91,9 +93,10 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 		RespError(w, errors.New("readall is error"), http.StatusBadRequest)
 		return
 	}
-	_type := params.ByName("type")
-
-	switch _type {
+	//r.ParseForm()
+	//_type := r.Form.Get("type")
+	_type := r.FormValue("type")
+	switch _type{
 	case "orderevent":
 		var msg MessageOrEmail
 		error := json.Unmarshal(data, &msg)
