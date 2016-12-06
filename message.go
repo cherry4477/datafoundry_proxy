@@ -75,20 +75,20 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 		return
 	}
 	if username != AdminUser {
-		RespError(w, errors.New("permission denied"), http.StatusUnauthorized)
+		RespError(w, errors.New("permission denied"), http.StatusForbidden)
 		glog.Info("is not an administrator")
 		return
 	}
 	if r.Body == nil {
 		glog.Fatal("no message")
-		RespError(w, errors.New("no message"), http.StatusUnauthorized)
+		RespError(w, errors.New("no message"), http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		glog.Error("readall is error")
-		RespError(w, errors.New("readall is error"), http.StatusUnauthorized)
+		RespError(w, errors.New("readall is error"), http.StatusBadRequest)
 		return
 	}
 	_type := params.ByName("type")
@@ -98,21 +98,24 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 		var msg MessageOrEmail
 		error := json.Unmarshal(data, &msg)
 		if error != nil {
-			RespError(w, errors.New("CreateMassageOrEmail Unmarshal error"), http.StatusUnauthorized)
+			RespError(w, errors.New("CreateMassageOrEmail Unmarshal error"), http.StatusBadRequest)
 			glog.Fatal("CreateMassageOrEmail Unmarshal error")
 			return
 		}
 		receiver := msg.Order.Account_id
 		_, error = messages.CreateInboxMessage(MessageType_Alert, receiver, AdminUser, "", string(data))
 		if error != nil {
-			RespError(w, errors.New("CreateMassageOrEmail create message failed error"), http.StatusUnauthorized)
+			RespError(w, errors.New("CreateMassageOrEmail create message failed error"), http.StatusBadRequest)
 			return
+			glog.Error("CreateMassageOrEmail create message failed error")
 		}
 	default:
-		RespError(w, errors.New("CreateMassageOrEmail  error"), http.StatusUnauthorized)
+		RespError(w, errors.New("CreateMassageOrEmail  error"), http.StatusBadRequest)
+		glog.Error("CreateMassageOrEmail  error")
 		return
 	}
 	RespOK(w, nil)
+	glog.Info("reseive success")
 
 }
 
