@@ -20,6 +20,177 @@ import (
 	//"fmt"
 )
 
+func GetMessages(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
+
+	var username string
+	var err error
+
+	if username, err = authedIdentities(r); err != nil {
+		RespError(w, err, http.StatusUnauthorized)
+		return
+	}
+
+	r.Header.Set("User", username)
+
+	messages.GetMyMessages(w, r, params)
+}
+
+func GetMessageStat(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
+
+	var username string
+	var err error
+
+	if username, err = authedIdentities(r); err != nil {
+		RespError(w, err, http.StatusUnauthorized)
+		return
+	}
+
+	r.Header.Set("User", username)
+
+	messages.GetNotificationStats(w, r, params)
+}
+
+func DeleteMessage(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
+
+	var username string
+	var err error
+
+	if username, err = authedIdentities(r); err != nil {
+		RespError(w, err, http.StatusUnauthorized)
+		return
+	}
+
+	r.Header.Set("User", username)
+
+	messages.DeleteMessage(w, r, params)
+}
+
+func ModifyMessage(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
+
+	var username string
+	var err error
+
+	if username, err = authedIdentities(r); err != nil {
+		RespError(w, err, http.StatusUnauthorized)
+		return
+	}
+
+	r.Header.Set("User", username)
+
+	messages.ModifyMessageWithCustomHandler(w, r, params, ModifyMessage_Custom)
+}
+
+func ModifyMessage_Custom(r *http.Request, params httprouter.Params, m map[string]interface{}) (bool, *messages.Error) {
+	action, e := messages.MustStringParamInMap(m, "action", messages.StringParamType_UrlWord)
+	if e != nil {
+		return false, e
+	}
+
+	switch action {
+	default:
+		return false, nil
+	case AcceptOrgInvitation:
+		currentUserName, e := messages.MustCurrentUserName(r)
+		if e != nil {
+			return true, e
+		}
+
+		messageid, e := messages.MustIntParamInPath(params, "id")
+		if e != nil {
+			return true, e
+		}
+
+		msg, err := messages.GetMessageByUserAndID(currentUserName, messageid)
+		if err != nil {
+			return true, messages.GetError2(messages.ErrorCodeGetMessage, err.Error())
+		}
+
+		if strings.Index(msg.Hints, InviteMessage_Hints) < 0 {
+			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, "not an org invitation message")
+		}
+
+		im := &InviteMessage{}
+
+		err = json.Unmarshal([]byte(msg.Raw_data), im)
+		if err != nil {
+			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, err.Error())
+		}
+
+		if im.Accepted {
+			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, "already accepted")
+		}
+
+		im.Accepted = true
+
+		jsondata, err := json.Marshal(im)
+		if err != nil {
+			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, err.Error())
+		}
+
+		err = messages.ModifyMessageDataByID(messageid, string(jsondata))
+		if err != nil {
+			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, err.Error())
+		}
+	}
+
+	return true, nil
+}
+
+//===============================================================
+
+const (
+	MessageType_SiteNotify = "sitenotify" // may contains different messages, use message.hints to differentiate them
+	//MessageType_AccountMsg = "accountmsg" // private message?
+	//MessageType_Alert      = "alert"
+	MessageType_OrderEvent = "orderevent"
+)
+
+const (
+	Level_Any = -1
+	Level_General = 0
+	Level_Important = 50
+)
+
+//===============================================================
+
+const InviteMessage_Hints = "invite,org"            // DON'T CHANGE!
+const AcceptOrgInvitation = "accept_org_invitation" // DON'T CHANGE!
+type InviteMessage struct {
+	OrgID    string `json:"org_id"`
+	OrgName  string `json:"org_name"`
+	Accepted bool   `json:"accepted"`
+}
+
+func SendOrgInviteMessage(receiver, sender, orgId, orgName string) error {
+	msg := &InviteMessage{
+		OrgID:    orgId,
+		OrgName:  orgName,
+		Accepted: false,
+	}
+
+	jsonData, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	_, err = messages.CreateInboxMessage(
+		MessageType_SiteNotify,
+		receiver,
+		sender,
+		InviteMessage_Hints,
+		Level_General,
+		string(jsonData),
+	)
+
+	return err
+}
+
+//===============================================================
+
 type Plan struct {
 	Id              int64     `json:"id,omitempty"`
 	Plan_id         string    `json:"plan_id,omitempty"`
@@ -97,7 +268,7 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 	//_type := r.Form.Get("type")
 	_type := r.FormValue("type")
 	switch _type{
-	case "orderevent":
+	case MessageType_OrderEvent:
 		var msg MessageOrEmail
 		error := json.Unmarshal(data, &msg)
 		if error != nil {
@@ -105,8 +276,9 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 			glog.Fatal("CreateMassageOrEmail Unmarshal error")
 			return
 		}
+
 		receiver := msg.Order.Account_id
-		_, error = messages.CreateInboxMessage(MessageType_Alert, receiver, AdminUser, "", string(data))
+		_, error = messages.CreateInboxMessage(MessageType_OrderEvent, receiver, AdminUser, "", Level_General, string(data))
 		if error != nil {
 			RespError(w, errors.New("CreateMassageOrEmail create message failed error"), http.StatusBadRequest)
 			return
@@ -120,163 +292,4 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 	RespOK(w, nil)
 	glog.Info("reseive success")
 
-}
-
-func GetMessages(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
-
-	var username string
-	var err error
-
-	if username, err = authedIdentities(r); err != nil {
-		RespError(w, err, http.StatusUnauthorized)
-		return
-	}
-
-	r.Header.Set("User", username)
-
-	messages.GetMyMessages(w, r, params)
-}
-
-func GetMessageStat(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
-
-	var username string
-	var err error
-
-	if username, err = authedIdentities(r); err != nil {
-		RespError(w, err, http.StatusUnauthorized)
-		return
-	}
-
-	r.Header.Set("User", username)
-
-	messages.GetNotificationStats(w, r, params)
-}
-
-func ModifyMessage(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
-
-	var username string
-	var err error
-
-	if username, err = authedIdentities(r); err != nil {
-		RespError(w, err, http.StatusUnauthorized)
-		return
-	}
-
-	r.Header.Set("User", username)
-
-	messages.ModifyMessageWithCustomHandler(w, r, params, ModifyMessage_Custom)
-}
-
-func DeleteMessage(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	glog.Infoln("from", r.RemoteAddr, r.Method, r.URL.RequestURI(), r.Proto)
-
-	var username string
-	var err error
-
-	if username, err = authedIdentities(r); err != nil {
-		RespError(w, err, http.StatusUnauthorized)
-		return
-	}
-
-	r.Header.Set("User", username)
-
-	messages.DeleteMessage(w, r, params)
-}
-
-//===============================================================
-
-const (
-	MessageType_SiteNotify = "sitenotify"
-	MessageType_AccountMsg = "accountmsg"
-	MessageType_Alert      = "alert"
-)
-
-const InviteMessage_Hints = "invite,org"            // DON'T CHANGE!
-const AcceptOrgIntitation = "accept_org_invitation" // DON'T CHANGE!
-type InviteMessage struct {
-	OrgID    string `json:"org_id"`
-	OrgName  string `json:"org_name"`
-	Accepted bool   `json:"accepted"`
-}
-
-func SendOrgInviteMessage(receiver, sender, orgId, orgName string) error {
-	msg := &InviteMessage{
-		OrgID:    orgId,
-		OrgName:  orgName,
-		Accepted: false,
-	}
-
-	jsonData, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
-	_, err = messages.CreateInboxMessage(
-		MessageType_SiteNotify,
-		receiver,
-		sender,
-		InviteMessage_Hints,
-		string(jsonData),
-	)
-
-	return err
-}
-
-func ModifyMessage_Custom(r *http.Request, params httprouter.Params, m map[string]interface{}) (bool, *messages.Error) {
-	action, e := messages.MustStringParamInMap(m, "action", messages.StringParamType_UrlWord)
-	if e != nil {
-		return false, e
-	}
-
-	switch action {
-	default:
-		return false, nil
-	case AcceptOrgIntitation:
-		currentUserName, e := messages.MustCurrentUserName(r)
-		if e != nil {
-			return true, e
-		}
-
-		messageid, e := messages.MustIntParamInPath(params, "id")
-		if e != nil {
-			return true, e
-		}
-
-		msg, err := messages.GetMessageByUserAndID(currentUserName, messageid)
-		if err != nil {
-			return true, messages.GetError2(messages.ErrorCodeGetMessage, err.Error())
-		}
-
-		if strings.Index(msg.Hints, InviteMessage_Hints) < 0 {
-			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, "not an org invitation message")
-		}
-
-		im := &InviteMessage{}
-
-		err = json.Unmarshal([]byte(msg.Raw_data), im)
-		if err != nil {
-			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, err.Error())
-		}
-
-		if im.Accepted {
-			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, "already accepted")
-		}
-
-		im.Accepted = true
-
-		jsondata, err := json.Marshal(im)
-		if err != nil {
-			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, err.Error())
-		}
-
-		err = messages.ModifyMessageDataByID(messageid, string(jsondata))
-		if err != nil {
-			return true, messages.GetError2(messages.ErrorCodeInvalidParameters, err.Error())
-		}
-	}
-
-	return true, nil
 }
