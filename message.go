@@ -14,8 +14,8 @@ import (
 	//"github.com/asiainfoLDP/datafoundry_serviceusage/usage"
 	//"log"
 	"io/ioutil"
-	"time"
 	"os"
+	"time"
 	//"strconv"
 	//"fmt"
 )
@@ -150,8 +150,8 @@ const (
 )
 
 const (
-	Level_Any = -1
-	Level_General = 0
+	Level_Any       = -1
+	Level_General   = 0
 	Level_Important = 50
 )
 
@@ -230,8 +230,10 @@ type MessageOrEmail struct {
 	Order  PurchaseOrder `json:order,omitempty`
 	Plan   *Plan         `json:plan,omitempty`
 }
+
 var AdminUser string
-func init(){
+
+func init() {
 	AdminUser = os.Getenv("MESSAGE_SENDER_ADMIN")
 	if AdminUser == "" {
 		glog.Fatal("MESSAGE_SENDER_ADMIN can't be blank")
@@ -267,7 +269,7 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 	//r.ParseForm()
 	//_type := r.Form.Get("type")
 	_type := r.FormValue("type")
-	switch _type{
+	switch _type {
 	case MessageType_OrderEvent:
 		var msg MessageOrEmail
 		error := json.Unmarshal(data, &msg)
@@ -276,13 +278,17 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 			glog.Fatal("CreateMassageOrEmail Unmarshal error")
 			return
 		}
-
 		receiver := msg.Order.Account_id
-		_, error = messages.CreateInboxMessage(MessageType_OrderEvent, receiver, AdminUser, "", Level_General, string(data))
+		var level = Level_General
+		switch msg.Reason {
+		case "order_renew_failed", "order_closed":
+			level = Level_Important
+		}
+		_, error = messages.CreateInboxMessage(MessageType_OrderEvent, receiver, AdminUser, msg.Reason, level, string(data))
 		if error != nil {
 			RespError(w, errors.New("CreateMassageOrEmail create message failed error"), http.StatusBadRequest)
-			return
 			glog.Error("CreateMassageOrEmail create message failed error")
+			return
 		}
 	default:
 		RespError(w, errors.New("CreateMassageOrEmail  error"), http.StatusBadRequest)
