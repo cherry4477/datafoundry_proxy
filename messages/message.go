@@ -17,13 +17,13 @@ import (
 //
 //==================================================================
 
-func CreateInboxMessage(messageType, receiver, sender, hints, jsonData string) (int64, error) {
+func CreateInboxMessage(messageType, receiver, sender, hints string, level int, jsonData string) (int64, error) {
 	db := getDB()
 	if db == nil {
 		return 0, errors.New("db not inited")
 	}
 
-	return notification.CreateMessage(db, messageType, receiver, sender, notification.Level_General, hints, jsonData)
+	return notification.CreateMessage(db, messageType, receiver, sender, level, hints, jsonData)
 }
 
 func GetMessageByUserAndID(currentUserName string, messageid int64) (*notification.Message, error) {

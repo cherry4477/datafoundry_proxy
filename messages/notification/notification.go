@@ -204,8 +204,8 @@ const (
 
 const (
 	Level_Any = -1
-	Level_General = 0
-	Level_Request = 50
+	//Level_General = 0
+	//Level_Request = 50
 )
 
 const (
