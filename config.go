@@ -19,32 +19,32 @@ const (
 	LDAP_ADMIN_PASSWORD string = "LDAP_ADMIN_PASSWORD"
 	LDAP_BASE_DN        string = "LDAP_BASE_DN" //"cn=%s,ou=Users,dc=openstack,dc=org"
 
-	DATAFOUNDRY_HOST_ADDR  string = "DATAFOUNDRY_HOST_ADDR"
+	DATAFOUNDRY_HOST_ADDR string = "DATAFOUNDRY_HOST_ADDR"
 	DATAFOUNDRY_ADMIN_USER string = "DATAFOUNDRY_ADMIN_USER"
 	DATAFOUNDRY_ADMIN_PASS string = "DATAFOUNDRY_ADMIN_PASS"
-	DATAFOUNDRY_API_ADDR   string = "DATAFOUNDRY_API_ADDR"
-
+	DATAFOUNDRY_API_ADDR  string = "DATAFOUNDRY_API_ADDR"
+	
 	ENV_NAME_MYSQL_ADDR       string = "ENV_NAME_MYSQL_ADDR"
 	ENV_NAME_MYSQL_PORT       string = "ENV_NAME_MYSQL_PORT"
 	ENV_NAME_MYSQL_DATABASE   string = "ENV_NAME_MYSQL_DATABASE"
 	ENV_NAME_MYSQL_USER       string = "ENV_NAME_MYSQL_USER"
 	ENV_NAME_MYSQL_PASSWORD   string = "ENV_NAME_MYSQL_PASSWORD"
 	DONT_UPGRADE_MYSQL_TABLES string = "DONT_UPGRADE_MYSQL_TABLES"
-
+	
 	ENV_NAME_KAFKA_ADDR string = "ENV_NAME_KAFKA_ADDR"
 	ENV_NAME_KAFKA_PORT string = "ENV_NAME_KAFKA_PORT"
-
+	
 	ADMIN_EMAIL_USERNAME string = "ADMIN_EMAIL_USERNAME"
 	ADMIN_EMAIL          string = "ADMIN_EMAIL"
 	ADMIN_EMAIL_PASSWORD string = "ADMIN_EMAIL_PASSWORD"
 	EMAIL_SERVER_HOST    string = "EMAIL_SERVER_HOST"
 	EMAIL_SERVER_PORT    string = "EMAIL_SERVER_PORT"
-
+	
 	HEKETI_HOST_ADDR string = "HEKETI_HOST_ADDR"
 	HEKETI_HOST_PORT string = "HEKETI_HOST_PORT"
 	HEKETI_USER      string = "HEKETI_USER"
 	HEKETI_KEY       string = "HEKETI_KEY"
-
+	
 	GLUSTER_ENDPOINTS_NAME string = "GLUSTER_ENDPOINTS_NAME"
 )
 const (
@@ -72,11 +72,11 @@ var (
 	}
 	MysqlEnv = &EnvOnce2{EnvOnce: EnvOnce{
 		envs: map[string]string{
-			ENV_NAME_MYSQL_ADDR:     "",
-			ENV_NAME_MYSQL_PORT:     "",
-			ENV_NAME_MYSQL_DATABASE: "",
-			ENV_NAME_MYSQL_USER:     "",
-			ENV_NAME_MYSQL_PASSWORD: "",
+			ENV_NAME_MYSQL_ADDR:       "",
+			ENV_NAME_MYSQL_PORT:       "",
+			ENV_NAME_MYSQL_DATABASE:   "",
+			ENV_NAME_MYSQL_USER:       "",
+			ENV_NAME_MYSQL_PASSWORD:   "",
 		},
 	}}
 	//KafkaEnv = &EnvOnce2{EnvOnce: EnvOnce{
@@ -94,7 +94,7 @@ var (
 			EMAIL_SERVER_PORT:    "",
 		},
 	}
-
+	
 	EtcdStorageEnv = &EnvOnce{
 		envs: map[string]string{
 			ETCD_HTTP_ADDR: "http://127.0.0.1:2379",
@@ -112,10 +112,10 @@ var (
 	}
 	DataFoundryEnv = &EnvOnce{
 		envs: map[string]string{
-			DATAFOUNDRY_HOST_ADDR:  "dev.dataos.io:8443",
+			DATAFOUNDRY_HOST_ADDR: "dev.dataos.io:8443",
 			DATAFOUNDRY_ADMIN_USER: "",
 			DATAFOUNDRY_ADMIN_PASS: "",
-			DATAFOUNDRY_API_ADDR:   "",
+			DATAFOUNDRY_API_ADDR:  "",
 		},
 	}
 	RedisEnv = &EnvOnce{
@@ -191,6 +191,7 @@ func (e *EnvOnce2) Init() {
 	e.once.Do(fn)
 }
 
+
 func envNil(k string) {
 	glog.Errorf("[Env] %s must not be nil.", k)
 }
@@ -198,15 +199,15 @@ func envNil(k string) {
 func init() {
 
 	flag.Parse()
-
+	
 	GlusterEnv.Init()
 	GlusterEnv.Print()
 	GlusterEnv.Validate(envNil)
-
+	
 	HeketiEnv.Init()
 	HeketiEnv.Print()
 	// HeketiEnv.Validate(envNil)
-
+	
 	MysqlEnv.Init()
 	MysqlEnv.Print()
 	MysqlEnv.Validate(envNil)
@@ -215,11 +216,11 @@ func init() {
 	//KafkaEnv.Init()
 	//KafkaEnv.Print()
 	//KafkaEnv.Validate(envNil)
-
+	
 	EmailEnv.Init()
 	EmailEnv.Print()
 	EmailEnv.Validate(envNil)
-
+	
 	EtcdStorageEnv.Init()
 	EtcdStorageEnv.Print()
 	//EtcdStorageEnv.Validate(envNil)

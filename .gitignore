@@ -5,5 +5,3 @@ oauth
 start.sh
 dev*
 *test.go
-docker-compose.yml
-
