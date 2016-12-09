@@ -18,6 +18,9 @@ import (
 	"time"
 	//"strconv"
 	//"fmt"
+	"fmt"
+	"github.com/asiainfoLDP/datafoundry_payment/api/openshift"
+	"github.com/asiainfoLDP/datahub_commons/common"
 )
 
 func GetMessages(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -278,13 +281,17 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 			glog.Fatal("CreateMassageOrEmail Unmarshal error")
 			return
 		}
-		receiver := msg.Order.Account_id
 		var level = Level_General
 		switch msg.Reason {
 		case "order_renew_failed", "order_closed":
 			level = Level_Important
 		}
-		_, error = messages.CreateInboxMessage(MessageType_OrderEvent, receiver, AdminUser, msg.Reason, level, string(data))
+		var admins = GetProjectAdmins(msg.Order.Account_id)
+		for admin, adminValue := range admins {
+			glog.Infof("k=%v ,v=%v", admin, adminValue)
+			_, error = messages.CreateInboxMessage(MessageType_OrderEvent, adminValue, AdminUser, msg.Reason, level, string(data))
+
+		}
 		if error != nil {
 			RespError(w, errors.New("CreateMassageOrEmail create message failed error"), http.StatusBadRequest)
 			glog.Error("CreateMassageOrEmail create message failed error")
@@ -298,4 +305,20 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 	RespOK(w, nil)
 	glog.Info("reseive success")
 
+}
+
+func GetProjectAdmins(projectName string) (adminstratorNmae []string) {
+	url := fmt.Sprintf("%s/orgs/:project/roles", openshift.ListMembers)
+	response, responsedata, err := common.RemoteCall("get", url, "", "")
+	if err != nil {
+		glog.Error("CreateMassageOrEmail create message failed error")
+		return
+	}
+	if response.StatusCode != http.StatusOK {
+		glog.Error("GetProjectAdmins error")
+		return
+	}
+	glog.Info("GetProjectAdmins is success")
+
+	return []string{string(responsedata)}
 }
