@@ -43,6 +43,14 @@ func adminClient() *OpenshiftClient {
 	return theOC
 }
 
+func AdminToken() string {
+	if theOC == nil  {
+		return ""
+	} else {
+		return theOC.bearerToken
+	}
+}
+
 func Init(ocEnv env.Env) {
 	theOC = newOpenshiftClient(
 		ocEnv.Get("DATAFOUNDRY_HOST_ADDR"),
