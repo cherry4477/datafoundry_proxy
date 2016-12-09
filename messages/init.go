@@ -3,7 +3,7 @@ package messages
 import (
 	"database/sql"
 	"fmt"
-	"os"
+	//"os"
 	"time"
 
 	//"github.com/julienschmidt/httprouter"
@@ -16,13 +16,6 @@ import (
 
 	"github.com/asiainfoLDP/datafoundry_proxy/messages/notification"
 )
-
-func init() {
-	log_level := log.LevelString2Int(os.Getenv("LOG_LEVEL"))
-	if log_level >= 0 {
-		log.SetDefaultLoggerLevel(log_level)
-	}
-}
 
 //======================================================
 //
