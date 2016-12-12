@@ -310,10 +310,13 @@ func CreateMassageOrEmail(w http.ResponseWriter, r *http.Request, params httprou
 	glog.Info("reseive success")
 
 }
-
+var PAYMENT_SERVICE_ADDR string
+func init(){
+	PAYMENT_SERVICE_ADDR = "http://"+os.Getenv("PAYMENT_SERVICE_ADDR")
+}
 func GetProjectAdmins(projectName, region, token string)  ([]string, error) {
-	service := os.Getenv("PAYMENT_SERVICE_ADDR")
-	url := service + "/lapi/v1/orgs/" + projectName + "/roles"
+	
+	url := PAYMENT_SERVICE_ADDR + "/lapi/v1/orgs/" + projectName + "/roles"
 	url += "?region=" + region
 	response, responsedata, err := common.RemoteCall("GET", url, token, "")
 	if err != nil {
